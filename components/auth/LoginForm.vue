@@ -25,6 +25,7 @@ const handleLogin = async () => {
       // Login bem-sucedido, redirecionar para dashboard
       navigateTo('/dashboard');
     } else {
+      // Exibir a mensagem de erro específica da API
       errorMessage.value = result.error || 'Erro ao fazer login';
     }
   } catch (error) {
@@ -53,6 +54,7 @@ const handleLogin = async () => {
                     color="primary"
                     type="email"
                     :disabled="loading"
+                    placeholder="admin@letsjam.com"
                 ></v-text-field>
             </v-col>
             <v-col cols="12">
@@ -65,13 +67,17 @@ const handleLogin = async () => {
                     hide-details
                     color="primary"
                     :disabled="loading"
+                    placeholder="Digite sua senha"
                 ></v-text-field>
             </v-col>
             
             <!-- Mensagem de erro -->
             <v-col cols="12" v-if="errorMessage">
                 <v-alert type="error" variant="tonal" class="mb-3">
-                    {{ errorMessage }}
+                    <div class="d-flex align-center">
+                        <v-icon class="mr-2">mdi-alert-circle</v-icon>
+                        {{ errorMessage }}
+                    </div>
                 </v-alert>
             </v-col>
             

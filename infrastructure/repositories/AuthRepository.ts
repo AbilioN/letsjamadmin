@@ -16,13 +16,9 @@ export class AuthRepository implements IAuthRepository {
       password,
     };
 
-    try {
-      const response = await this.apiClient.post<LoginResponse>(API_CONFIG.ENDPOINTS.LOGIN, loginData);
-      return response;
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw new Error('Falha na autenticação');
-    }
+    // Deixar o erro ser propagado para o serviço tratar
+    const response = await this.apiClient.post<LoginResponse>(API_CONFIG.ENDPOINTS.LOGIN, loginData);
+    return response;
   }
 
   async logout(): Promise<void> {

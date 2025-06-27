@@ -1,6 +1,11 @@
 import type { IHttpClient, RequestConfig } from '~/types/domain';
 import { getApiConfig } from '~/config/api';
 
+interface ApiErrorResponse {
+  message: string;
+  errors?: Record<string, string[]>;
+}
+
 export class ApiClient implements IHttpClient {
   private baseURL: string;
   private defaultHeaders: Record<string, string>;
@@ -60,12 +65,20 @@ export class ApiClient implements IHttpClient {
       
       clearTimeout(timeoutId);
       
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Tentar extrair mensagem de erro da API
+        if (isJson) {
+          const errorData = await response.json() as ApiErrorResponse;
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
       }
 
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
+      if (isJson) {
         return await response.json();
       } else {
         return await response.text() as T;

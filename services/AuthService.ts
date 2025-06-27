@@ -22,9 +22,12 @@ export class AuthService implements IAuthService {
         message: 'Login realizado com sucesso'
       };
     } catch (error) {
+      // Capturar a mensagem específica de erro da API
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
+        error: errorMessage
       };
     }
   }

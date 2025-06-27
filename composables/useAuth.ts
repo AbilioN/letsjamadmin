@@ -24,10 +24,17 @@ export const useAuth = () => {
         
         return { success: true };
       } else {
-        return { success: false, error: result.error || 'Credenciais inválidas' };
+        // Retornar a mensagem de erro específica da API
+        return { 
+          success: false, 
+          error: result.error || 'Credenciais inválidas' 
+        };
       }
     } catch (error) {
-      return { success: false, error: 'Erro ao fazer login' };
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erro ao fazer login' 
+      };
     }
   }
 
