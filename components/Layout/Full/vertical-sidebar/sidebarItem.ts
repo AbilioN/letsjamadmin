@@ -35,6 +35,12 @@ const sidebarItem: menu[] = [
     icon: "graph-new-linear",
     to: "/",
   },
+  { header: "Management" },
+  {
+    title: "Users",
+    icon: "users-group-rounded-line-duotone",
+    to: "/users",
+  },
   { header: "ui" },
   {
     title: "Alert",
