@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 
 const checkbox = ref(false);
-const username = ref('');
+const email = ref('');
 const password = ref('');
 const loading = ref(false);
 const errorMessage = ref('');
@@ -10,7 +10,7 @@ const errorMessage = ref('');
 const { login } = useAuth();
 
 const handleLogin = async () => {
-  if (!username.value || !password.value) {
+  if (!email.value || !password.value) {
     errorMessage.value = 'Por favor, preencha todos os campos';
     return;
   }
@@ -19,7 +19,7 @@ const handleLogin = async () => {
   errorMessage.value = '';
 
   try {
-    const result = await login(username.value, password.value);
+    const result = await login(email.value, password.value);
     
     if (result.success) {
       // Login bem-sucedido, redirecionar para dashboard
@@ -44,13 +44,14 @@ const handleLogin = async () => {
     <form @submit.prevent="handleLogin">
         <v-row class="mb-3">
             <v-col cols="12">
-                <v-label class="font-weight-medium mb-1">Username</v-label>
+                <v-label class="font-weight-medium mb-1">Email</v-label>
                 <v-text-field 
-                    v-model="username"
+                    v-model="email"
                     variant="outlined" 
                     class="pwdInput" 
                     hide-details 
                     color="primary"
+                    type="email"
                     :disabled="loading"
                 ></v-text-field>
             </v-col>

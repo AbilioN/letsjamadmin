@@ -1,65 +1,73 @@
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  name: string;
-}
+import type { Admin } from '~/types/api';
+import { AuthService } from '~/services/AuthService';
 
 export const useAuth = () => {
   // Estado reativo do usuário
-  const user = useState<User | null>('user', () => null)
+  const user = useState<Admin | null>('user', () => null)
   const isAuthenticated = computed(() => !!user.value)
+  
+  // Instância do serviço de autenticação
+  const authService = new AuthService();
 
   // Função de login
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
-      // Simular uma chamada de API
-      // Em produção, você faria uma chamada real para seu backend
-      if (username === 'admin' && password === 'admin') {
-        user.value = {
-          id: 1,
-          username: 'admin',
-          email: 'admin@example.com',
-          name: 'Administrador'
-        }
+      const result = await authService.login(email, password);
+      
+      if (result.success && result.data) {
+        user.value = result.data.admin;
         
-        // Salvar no localStorage para persistir entre sessões
+        // Salvar dados do usuário no localStorage
         if (process.client) {
-          localStorage.setItem('user', JSON.stringify(user.value))
+          localStorage.setItem('user', JSON.stringify(result.data.admin));
         }
         
-        return { success: true }
+        return { success: true };
       } else {
-        return { success: false, error: 'Credenciais inválidas' }
+        return { success: false, error: result.error || 'Credenciais inválidas' };
       }
     } catch (error) {
-      return { success: false, error: 'Erro ao fazer login' }
+      return { success: false, error: 'Erro ao fazer login' };
     }
   }
 
   // Função de logout
-  const logout = () => {
-    user.value = null
-    if (process.client) {
-      localStorage.removeItem('user')
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } finally {
+      user.value = null;
+      if (process.client) {
+        localStorage.removeItem('user');
+      }
+      navigateTo('/auth/login');
     }
-    navigateTo('/auth/login')
   }
 
   // Função para verificar se o usuário está logado (usado no middleware)
-  const checkAuth = () => {
+  const checkAuth = async () => {
     if (process.client && !user.value) {
-      const savedUser = localStorage.getItem('user')
+      // Tentar recuperar usuário do localStorage
+      const savedUser = localStorage.getItem('user');
       if (savedUser) {
-        user.value = JSON.parse(savedUser)
+        user.value = JSON.parse(savedUser);
+      }
+      
+      // Se não há usuário salvo mas há token, tentar buscar dados do usuário
+      if (!user.value && authService.isAuthenticated()) {
+        const currentUser = await authService.getCurrentUser();
+        if (currentUser) {
+          user.value = currentUser;
+          localStorage.setItem('user', JSON.stringify(currentUser));
+        }
       }
     }
-    return isAuthenticated.value
+    return isAuthenticated.value;
   }
 
   // Inicializar o estado quando o composable for usado
   if (process.client) {
-    checkAuth()
+    checkAuth();
   }
 
   return {
