@@ -1,5 +1,5 @@
 import type { IAuthService } from '~/types/domain';
-import type { LoginResponse, Admin, ApiResponse } from '~/types/api';
+import type { LoginResponse, Admin, ApiResponse, UsersResponse } from '~/types/api';
 import { AuthRepository } from '~/infrastructure/repositories/AuthRepository';
 
 export class AuthService implements IAuthService {
@@ -70,5 +70,24 @@ export class AuthService implements IAuthService {
     }
     
     return await this.authRepository.getCurrentUser();
+  }
+
+  async getUsers(page: number = 1, perPage: number = 15): Promise<ApiResponse<UsersResponse>> {
+    try {
+      const response = await this.authRepository.getUsers(page, perPage);
+      
+      return {
+        success: true,
+        data: response,
+        message: 'Usuários carregados com sucesso'
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
   }
 } 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import UiChildCard from '@/components/shared/UiChildCard.vue';
 
 // Definir middleware de autenticação
@@ -7,115 +7,23 @@ definePageMeta({
   middleware: 'auth'
 });
 
-// Dados fictícios de usuários
-const users = ref([
-  {
-    id: 1,
-    name: 'João Silva',
-    email: 'joao.silva@letsjam.com',
-    role: 'Admin',
-    status: 'Ativo',
-    statusColor: 'success',
-    avatar: '/images/profile/user-1.jpg',
-    phone: '+55 (11) 99999-9999',
-    department: 'TI',
-    lastLogin: '2024-01-15 14:30',
-    createdAt: '2023-01-15'
-  },
-  {
-    id: 2,
-    name: 'Maria Santos',
-    email: 'maria.santos@letsjam.com',
-    role: 'Manager',
-    status: 'Ativo',
-    statusColor: 'success',
-    avatar: '/images/profile/user-2.jpg',
-    phone: '+55 (11) 88888-8888',
-    department: 'Marketing',
-    lastLogin: '2024-01-14 16:45',
-    createdAt: '2023-03-20'
-  },
-  {
-    id: 3,
-    name: 'Pedro Costa',
-    email: 'pedro.costa@letsjam.com',
-    role: 'User',
-    status: 'Inativo',
-    statusColor: 'error',
-    avatar: '/images/profile/user-3.jpg',
-    phone: '+55 (11) 77777-7777',
-    department: 'Vendas',
-    lastLogin: '2024-01-10 09:15',
-    createdAt: '2023-06-10'
-  },
-  {
-    id: 4,
-    name: 'Ana Oliveira',
-    email: 'ana.oliveira@letsjam.com',
-    role: 'Editor',
-    status: 'Ativo',
-    statusColor: 'success',
-    avatar: '/images/profile/user-4.jpg',
-    phone: '+55 (11) 66666-6666',
-    department: 'Conteúdo',
-    lastLogin: '2024-01-15 11:20',
-    createdAt: '2023-08-05'
-  },
-  {
-    id: 5,
-    name: 'Carlos Ferreira',
-    email: 'carlos.ferreira@letsjam.com',
-    role: 'User',
-    status: 'Pendente',
-    statusColor: 'warning',
-    avatar: '/images/profile/user-5.jpg',
-    phone: '+55 (11) 55555-5555',
-    department: 'Suporte',
-    lastLogin: 'Nunca',
-    createdAt: '2024-01-12'
-  },
-  {
-    id: 6,
-    name: 'Lucia Mendes',
-    email: 'lucia.mendes@letsjam.com',
-    role: 'Manager',
-    status: 'Ativo',
-    statusColor: 'success',
-    avatar: '/images/profile/user-6.jpg',
-    phone: '+55 (11) 44444-4444',
-    department: 'RH',
-    lastLogin: '2024-01-15 13:10',
-    createdAt: '2023-02-28'
-  },
-  {
-    id: 7,
-    name: 'Roberto Alves',
-    email: 'roberto.alves@letsjam.com',
-    role: 'User',
-    status: 'Ativo',
-    statusColor: 'success',
-    avatar: '/images/profile/user-7.jpg',
-    phone: '+55 (11) 33333-3333',
-    department: 'Financeiro',
-    lastLogin: '2024-01-14 17:30',
-    createdAt: '2023-09-15'
-  },
-  {
-    id: 8,
-    name: 'Fernanda Lima',
-    email: 'fernanda.lima@letsjam.com',
-    role: 'Editor',
-    status: 'Inativo',
-    statusColor: 'error',
-    avatar: '/images/profile/user-8.jpg',
-    phone: '+55 (11) 22222-2222',
-    department: 'Conteúdo',
-    lastLogin: '2024-01-08 10:45',
-    createdAt: '2023-04-12'
-  }
-]);
+// Usar o composable de usuários
+const {
+  formattedUsers,
+  pagination,
+  loading,
+  error,
+  loadUsers,
+  nextPage,
+  prevPage,
+  goToPage,
+  changePerPage,
+  canGoNext,
+  canGoPrev,
+  pageNumbers
+} = useUsers();
 
-// Estados reativos
+// Estados reativos para filtros
 const search = ref('');
 const selectedStatus = ref('all');
 const selectedRole = ref('all');
@@ -124,38 +32,27 @@ const showAddDialog = ref(false);
 const showEditDialog = ref(false);
 const showDeleteDialog = ref(false);
 const selectedUser = ref(null);
-const loading = ref(false);
 
 // Filtros disponíveis
 const statusOptions = [
   { value: 'all', label: 'Todos os Status' },
   { value: 'Ativo', label: 'Ativo' },
-  { value: 'Inativo', label: 'Inativo' },
   { value: 'Pendente', label: 'Pendente' }
 ];
 
 const roleOptions = [
   { value: 'all', label: 'Todos os Roles' },
-  { value: 'Admin', label: 'Admin' },
-  { value: 'Manager', label: 'Manager' },
-  { value: 'Editor', label: 'Editor' },
   { value: 'User', label: 'User' }
 ];
 
 const departmentOptions = [
   { value: 'all', label: 'Todos os Departamentos' },
-  { value: 'TI', label: 'TI' },
-  { value: 'Marketing', label: 'Marketing' },
-  { value: 'Vendas', label: 'Vendas' },
-  { value: 'Conteúdo', label: 'Conteúdo' },
-  { value: 'Suporte', label: 'Suporte' },
-  { value: 'RH', label: 'RH' },
-  { value: 'Financeiro', label: 'Financeiro' }
+  { value: 'TI', label: 'TI' }
 ];
 
 // Computed para filtrar usuários
 const filteredUsers = computed(() => {
-  return users.value.filter(user => {
+  return formattedUsers.value.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(search.value.toLowerCase()) ||
                          user.email.toLowerCase().includes(search.value.toLowerCase());
     const matchesStatus = selectedStatus.value === 'all' || user.status === selectedStatus.value;
@@ -183,19 +80,19 @@ const deleteUser = (user: any) => {
 
 const confirmDelete = () => {
   if (selectedUser.value) {
-    const index = users.value.findIndex(u => u.id === selectedUser.value.id);
-    if (index > -1) {
-      users.value.splice(index, 1);
-    }
+    // Aqui você implementaria a chamada para deletar na API
     showDeleteDialog.value = false;
     selectedUser.value = null;
+    // Recarregar usuários após deletar
+    loadUsers(pagination.value?.current_page || 1, pagination.value?.per_page || 15);
   }
 };
 
 const toggleUserStatus = (user: any) => {
+  // Aqui você implementaria a chamada para alterar status na API
   if (user.status === 'Ativo') {
-    user.status = 'Inativo';
-    user.statusColor = 'error';
+    user.status = 'Pendente';
+    user.statusColor = 'warning';
   } else {
     user.status = 'Ativo';
     user.statusColor = 'success';
@@ -208,6 +105,11 @@ const clearFilters = () => {
   selectedRole.value = 'all';
   selectedDepartment.value = 'all';
 };
+
+// Carregar usuários quando a página for montada
+onMounted(() => {
+  loadUsers();
+});
 </script>
 
 <template>
@@ -307,8 +209,30 @@ const clearFilters = () => {
       </v-col>
     </v-row>
 
+    <!-- Loading -->
+    <v-row v-if="loading">
+      <v-col cols="12">
+        <UiChildCard>
+          <div class="d-flex justify-center align-center py-8">
+            <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
+          </div>
+        </UiChildCard>
+      </v-col>
+    </v-row>
+
+    <!-- Erro -->
+    <v-row v-else-if="error">
+      <v-col cols="12">
+        <UiChildCard>
+          <v-alert type="error" variant="tonal" class="mb-0">
+            {{ error }}
+          </v-alert>
+        </UiChildCard>
+      </v-col>
+    </v-row>
+
     <!-- Tabela de Usuários -->
-    <v-row>
+    <v-row v-else>
       <v-col cols="12">
         <UiChildCard title="Lista de Usuários">
           <v-table fixed-header height="600px">
@@ -358,7 +282,7 @@ const clearFilters = () => {
                   </v-chip>
                 </td>
                 <td>{{ user.lastLogin }}</td>
-                <td>{{ user.createdAt }}</td>
+                <td>{{ new Date(user.created_at).toLocaleDateString('pt-BR') }}</td>
                 <td>
                   <div class="d-flex justify-center gap-1">
                     <v-btn
@@ -396,6 +320,61 @@ const clearFilters = () => {
               </tr>
             </tbody>
           </v-table>
+
+          <!-- Paginação -->
+          <div v-if="pagination" class="d-flex align-center justify-space-between mt-4">
+            <div class="text-body-2 text-medium-emphasis">
+              Mostrando {{ pagination.from }} a {{ pagination.to }} de {{ pagination.total }} usuários
+            </div>
+            
+            <div class="d-flex align-center gap-2">
+              <!-- Itens por página -->
+              <v-select
+                :model-value="pagination.per_page"
+                @update:model-value="changePerPage"
+                :items="[10, 15, 25, 50]"
+                variant="outlined"
+                density="compact"
+                hide-details
+                style="width: 80px"
+              />
+              
+              <!-- Navegação -->
+              <v-btn
+                icon
+                variant="text"
+                :disabled="!canGoPrev"
+                @click="prevPage"
+                title="Página anterior"
+              >
+                <v-icon>mdi-chevron-left</v-icon>
+              </v-btn>
+              
+              <!-- Números das páginas -->
+              <div class="d-flex gap-1">
+                <v-btn
+                  v-for="page in pageNumbers"
+                  :key="page"
+                  :color="page === pagination.current_page ? 'primary' : undefined"
+                  variant="text"
+                  size="small"
+                  @click="goToPage(page)"
+                >
+                  {{ page }}
+                </v-btn>
+              </div>
+              
+              <v-btn
+                icon
+                variant="text"
+                :disabled="!canGoNext"
+                @click="nextPage"
+                title="Próxima página"
+              >
+                <v-icon>mdi-chevron-right</v-icon>
+              </v-btn>
+            </div>
+          </div>
         </UiChildCard>
       </v-col>
     </v-row>
