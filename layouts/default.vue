@@ -22,6 +22,9 @@ useHead({
                         <NuxtPage  />
                     </div>
                 </v-container>
+                
+                <!-- Chat Widget -->
+                <ChatWidget />
             </v-main>
         </v-app>
     </v-locale-provider>
