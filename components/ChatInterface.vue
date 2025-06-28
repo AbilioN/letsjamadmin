@@ -20,6 +20,9 @@
             <p v-if="currentChat" class="text-caption text-grey">
               {{ currentChat.type === 'private' ? 'Chat privado' : 'Chat em grupo' }}
             </p>
+            <p v-else-if="initialUser" class="text-caption text-grey">
+              {{ initialUser.email }}
+            </p>
           </div>
         </div>
         <v-btn
@@ -34,7 +37,7 @@
     </div>
 
     <!-- Lista de Conversas -->
-    <div v-if="!currentChat" class="conversations-list">
+    <div v-if="!currentChat && !initialUser" class="conversations-list">
       <div v-if="loading" class="text-center pa-4">
         <v-progress-circular indeterminate color="primary" />
       </div>
@@ -90,7 +93,7 @@
       </div>
     </div>
 
-    <!-- Chat Atual -->
+    <!-- Chat Atual ou Chat Direto com Usuário -->
     <div v-else class="chat-main">
       <!-- Mensagens -->
       <div
@@ -112,7 +115,7 @@
           <v-icon size="64" color="grey" class="mb-4">mdi-message-outline</v-icon>
           <h3 class="text-h6 mb-2">Nenhuma mensagem</h3>
           <p class="text-body-2 text-grey">
-            Seja o primeiro a enviar uma mensagem!
+            {{ initialUser ? `Inicie uma conversa com ${initialUser.name}!` : 'Seja o primeiro a enviar uma mensagem!' }}
           </p>
         </div>
 
@@ -128,7 +131,7 @@
                 <span class="message-author">{{ getMessageAuthor(message) }}</span>
                 <span class="message-time">{{ message.time }}</span>
               </div>
-              <div class="message-text">{{ message.content }}</div>
+              <div class="message-text">{{ message.message }}</div>
             </div>
           </div>
         </div>
@@ -141,7 +144,7 @@
             <v-text-field
               v-model="newMessage"
               @keydown.enter="handleSendMessage"
-              placeholder="Digite sua mensagem..."
+              :placeholder="initialUser ? `Digite uma mensagem para ${initialUser.name}...` : 'Digite sua mensagem...'"
               variant="outlined"
               density="compact"
               hide-details
@@ -165,15 +168,17 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, watch } from 'vue';
-import type { Chat, ChatMessage } from '~/types/chat';
+import type { ChatMessage, ChatChannel } from '~/types/chat';
 
 // Props
 interface Props {
-  initialChat?: Readonly<Chat> | null;
+  initialChat?: Readonly<ChatChannel> | null;
+  initialUser?: any; // Usuário para iniciar chat
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  initialChat: null
+  initialChat: null,
+  initialUser: null
 });
 
 // Emits
@@ -196,6 +201,7 @@ const {
   loadConversations,
   selectChat,
   sendMessage,
+  startChatWithUser,
   getChatDisplayName,
   formatMessage
 } = useChatManager();
@@ -204,6 +210,9 @@ const {
 const chatTitle = computed(() => {
   if (currentChat.value) {
     return getChatDisplayName(currentChat.value);
+  }
+  if (props.initialUser) {
+    return `Chat com ${props.initialUser.name}`;
   }
   return 'Chat';
 });
@@ -214,14 +223,44 @@ const closeChat = () => {
 };
 
 const handleSendMessage = async () => {
-  if (!newMessage.value.trim() || !currentChat.value) return;
+  if (!newMessage.value.trim()) return;
   
   try {
-    await sendMessage(newMessage.value);
+    if (currentChat.value) {
+      // Se já tem um chat, enviar mensagem para ele
+      await sendMessage(newMessage.value);
+    } else if (props.initialUser) {
+      // Se não tem chat mas tem usuário inicial, enviar mensagem para o usuário
+      await sendMessageToUser(newMessage.value, props.initialUser.id, 'user');
+    }
     newMessage.value = '';
     scrollToBottom();
   } catch (err) {
     console.error('Erro ao enviar mensagem:', err);
+  }
+};
+
+const sendMessageToUser = async (content: string, userId: number, userType: 'user' | 'admin') => {
+  try {
+    const response = await startChatWithUser(userId, userType);
+    // Após criar o chat, enviar a mensagem
+    if (response) {
+      await sendMessage(content);
+    }
+  } catch (err) {
+    console.error('Erro ao enviar mensagem para usuário:', err);
+    throw err;
+  }
+};
+
+const initializeChat = async () => {
+  if (props.initialUser && !currentChat.value) {
+    try {
+      console.log('🚀 Iniciando chat com usuário:', props.initialUser);
+      await startChatWithUser(props.initialUser.id, 'user');
+    } catch (err) {
+      console.error('Erro ao inicializar chat:', err);
+    }
   }
 };
 
@@ -249,12 +288,13 @@ const getMessageAuthor = (message: ChatMessage & { isOwn: boolean; time: string 
   if (message.isOwn) {
     return 'Você';
   }
-  return message.sender_type === 'admin' ? 'Admin' : 'Usuário';
+  return message.user_name || 'Usuário';
 };
 
 // Lifecycle
-onMounted(() => {
-  loadConversations();
+onMounted(async () => {
+  await loadConversations();
+  await initializeChat();
 });
 
 // Watchers
@@ -262,6 +302,12 @@ watch(() => props.initialChat, (newChat) => {
   if (newChat) {
     // Carregar o chat quando initialChat mudar
     selectChat(newChat);
+  }
+}, { immediate: true });
+
+watch(() => props.initialUser, async (newUser) => {
+  if (newUser && !currentChat.value) {
+    await initializeChat();
   }
 }, { immediate: true });
 
@@ -273,7 +319,7 @@ watch(currentChat, () => {
   }
 });
 
-console.log('🎯 ChatInterface carregado com initialChat:', props.initialChat);
+console.log('🎯 ChatInterface carregado com initialChat:', props.initialChat, 'initialUser:', props.initialUser);
 </script>
 
 <style scoped>
