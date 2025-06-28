@@ -31,7 +31,11 @@ const selectedDepartment = ref('all');
 const showAddDialog = ref(false);
 const showEditDialog = ref(false);
 const showDeleteDialog = ref(false);
-const selectedUser = ref(null);
+const selectedUser = ref<any>(null);
+
+// Estados do chat
+const showChatDialog = ref(false);
+const selectedChatUser = ref<any>(null);
 
 // Filtros disponíveis
 const statusOptions = [
@@ -97,6 +101,13 @@ const toggleUserStatus = (user: any) => {
     user.status = 'Ativo';
     user.statusColor = 'success';
   }
+};
+
+// Função para iniciar chat com usuário
+const startChat = async (user: any) => {
+  console.log('Iniciando chat com usuário:', user);
+  selectedChatUser.value = user;
+  showChatDialog.value = true;
 };
 
 const clearFilters = () => {
@@ -289,6 +300,16 @@ onMounted(() => {
                       icon
                       size="small"
                       variant="text"
+                      color="info"
+                      @click="startChat(user)"
+                      title="Iniciar Chat"
+                    >
+                      <v-icon>mdi-chat</v-icon>
+                    </v-btn>
+                    <v-btn
+                      icon
+                      size="small"
+                      variant="text"
                       color="primary"
                       @click="editUser(user)"
                       title="Editar"
@@ -471,5 +492,52 @@ onMounted(() => {
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Dialog de Chat -->
+    <v-dialog v-model="showChatDialog" max-width="800px" persistent>
+      <v-card class="chat-dialog-card">
+        <v-card-title class="d-flex align-center justify-space-between pa-4">
+          <div class="d-flex align-center gap-3">
+            <v-avatar size="40" color="primary">
+              <v-icon>mdi-account</v-icon>
+            </v-avatar>
+            <div>
+              <div class="text-h6">Chat com {{ selectedChatUser?.name }}</div>
+              <div class="text-caption text-medium-emphasis">{{ selectedChatUser?.email }}</div>
+            </div>
+          </div>
+          <v-btn
+            icon
+            variant="text"
+            @click="showChatDialog = false"
+            title="Fechar"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        
+        <v-card-text class="chat-dialog-content pa-0">
+          <ChatInterface 
+            v-if="selectedChatUser"
+            :initial-chat="null"
+            :initial-user="selectedChatUser"
+            @close="showChatDialog = false"
+          />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </div>
-</template> 
+</template>
+
+<style scoped>
+.chat-dialog-card {
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-dialog-content {
+  flex: 1;
+  overflow: hidden;
+}
+</style> 
