@@ -1,5 +1,13 @@
 import { ChatRepository } from '~/infrastructure/repositories/ChatRepository';
-import type { ChatMessage, ChatChannel, ChatUser } from '~/types/chat';
+import type { 
+  ChatMessage, 
+  Chat, 
+  ChatResponse, 
+  MessageResponse, 
+  ChatMessageResponse,
+  ConversationsResponse,
+  MessagesResponse
+} from '~/types/chat';
 
 export class ChatService {
   private chatRepository: ChatRepository;
@@ -11,17 +19,10 @@ export class ChatService {
   /**
    * Criar chat privado
    */
-  async createPrivateChat(otherUserId: number, otherUserType: 'user' | 'admin'): Promise<ChatChannel> {
+  async createPrivateChat(otherUserId: number, otherUserType: 'user' | 'admin'): Promise<Chat> {
     try {
-      // Implementar criação de chat privado
-      // Por enquanto, retornar um mock
-      return {
-        id: Date.now(),
-        name: `Chat Privado`,
-        type: 'private',
-        participants: [],
-        unread_count: 0
-      };
+      const response = await this.chatRepository.createPrivateChat(otherUserId, otherUserType);
+      return response.chat;
     } catch (error) {
       console.error('ChatService - createPrivateChat error:', error);
       throw error;
@@ -31,16 +32,10 @@ export class ChatService {
   /**
    * Criar chat em grupo
    */
-  async createGroupChat(name: string, description: string, participants: Array<{ user_id: number; user_type: 'user' | 'admin' }>): Promise<ChatChannel> {
+  async createGroupChat(name: string, description: string, participants: Array<{ user_id: number; user_type: 'user' | 'admin' }>): Promise<Chat> {
     try {
-      // Implementar criação de chat em grupo
-      return {
-        id: Date.now(),
-        name,
-        type: 'public',
-        participants: [],
-        unread_count: 0
-      };
+      const response = await this.chatRepository.createGroupChat(name, description, participants);
+      return response.chat;
     } catch (error) {
       console.error('ChatService - createGroupChat error:', error);
       throw error;
@@ -50,7 +45,7 @@ export class ChatService {
   /**
    * Enviar mensagem para outro usuário (cria/usa chat privado)
    */
-  async sendMessageToUser(content: string, otherUserId: number, otherUserType: 'user' | 'admin'): Promise<{ chat: ChatChannel; message: ChatMessage }> {
+  async sendMessageToUser(content: string, otherUserId: number, otherUserType: 'user' | 'admin'): Promise<ChatMessageResponse> {
     try {
       // Validação básica
       if (!content.trim()) {
@@ -61,25 +56,7 @@ export class ChatService {
         throw new Error('Mensagem muito longa (máximo 1000 caracteres)');
       }
 
-      // Implementar envio de mensagem
-      const message: ChatMessage = {
-        id: Date.now(),
-        user_id: otherUserId,
-        user_name: 'Usuário',
-        message: content.trim(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      const chat: ChatChannel = {
-        id: Date.now(),
-        name: 'Chat Privado',
-        type: 'private',
-        participants: [],
-        unread_count: 0
-      };
-
-      return { chat, message };
+      return await this.chatRepository.sendMessageToUser(content.trim(), otherUserId, otherUserType);
     } catch (error) {
       console.error('ChatService - sendMessageToUser error:', error);
       throw error;
@@ -100,17 +77,8 @@ export class ChatService {
         throw new Error('Mensagem muito longa (máximo 1000 caracteres)');
       }
 
-      // Implementar envio de mensagem
-      const message: ChatMessage = {
-        id: Date.now(),
-        user_id: 1, // ID do usuário atual
-        user_name: 'Admin',
-        message: content.trim(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      return message;
+      const response = await this.chatRepository.sendMessageToChat(chatId, content.trim());
+      return response.message;
     } catch (error) {
       console.error('ChatService - sendMessageToChat error:', error);
       throw error;
@@ -120,13 +88,9 @@ export class ChatService {
   /**
    * Buscar conversa privada entre dois usuários
    */
-  async getConversation(otherUserId: number, otherUserType: 'user' | 'admin', page: number = 1, perPage: number = 50): Promise<any> {
+  async getConversation(otherUserId: number, otherUserType: 'user' | 'admin', page: number = 1, perPage: number = 50): Promise<MessagesResponse> {
     try {
-      // Implementar busca de conversa
-      return {
-        messages: [],
-        pagination: { current_page: page, per_page: perPage, total: 0 }
-      };
+      return await this.chatRepository.getConversation(otherUserId, otherUserType, page, perPage);
     } catch (error) {
       console.error('ChatService - getConversation error:', error);
       throw error;
@@ -136,13 +100,9 @@ export class ChatService {
   /**
    * Listar todos os chats do usuário
    */
-  async getConversations(page: number = 1, perPage: number = 20): Promise<any> {
+  async getConversations(page: number = 1, perPage: number = 20): Promise<ConversationsResponse> {
     try {
-      // Implementar busca de conversas
-      return {
-        chats: [],
-        pagination: { current_page: page, per_page: perPage, total: 0 }
-      };
+      return await this.chatRepository.getConversations(page, perPage);
     } catch (error) {
       console.error('ChatService - getConversations error:', error);
       throw error;
@@ -152,13 +112,9 @@ export class ChatService {
   /**
    * Buscar mensagens de um chat específico
    */
-  async getChatMessages(chatId: number, page: number = 1, perPage: number = 50): Promise<{ messages: ChatMessage[]; pagination: any }> {
+  async getChatMessages(chatId: number, page: number = 1, perPage: number = 50): Promise<MessagesResponse> {
     try {
-      // Implementar busca de mensagens
-      return {
-        messages: [],
-        pagination: { current_page: page, per_page: perPage, total: 0 }
-      };
+      return await this.chatRepository.getChatMessages(chatId, page, perPage);
     } catch (error) {
       console.error('ChatService - getChatMessages error:', error);
       throw error;
@@ -187,19 +143,18 @@ export class ChatService {
   /**
    * Validar chat
    */
-  validateChat(chat: ChatChannel): boolean {
+  validateChat(chat: Chat): boolean {
     return !!(
       chat.id &&
-      chat.name &&
       chat.type &&
-      ['public', 'private', 'direct'].includes(chat.type)
+      ['private', 'group'].includes(chat.type)
     );
   }
 
   /**
    * Obter nome do chat para exibição
    */
-  getChatDisplayName(chat: ChatChannel): string {
+  getChatDisplayName(chat: Chat): string {
     if (!chat.name) {
       return chat.type === 'private' ? 'Chat Privado' : 'Chat em Grupo';
     }
@@ -217,7 +172,7 @@ export class ChatService {
   /**
    * Verificar se o usuário pode enviar mensagem para o chat
    */
-  canSendMessage(chat: ChatChannel): boolean {
+  canSendMessage(chat: Chat): boolean {
     // Implementar lógica de permissões se necessário
     return true;
   }

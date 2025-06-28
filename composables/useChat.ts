@@ -1,11 +1,11 @@
-import type { ChatMessage, ChatUser, ChatChannel, ChatEvent, TypingEvent } from '~/types/chat';
+import type { ChatMessage, ChatUser, Chat, ChatEvent, TypingEvent } from '~/types/chat';
 import { ChatService } from '~/services/ChatService';
 
 export const useChat = () => {
   // Estados reativos
   const messages = ref<ChatMessage[]>([]);
-  const channels = ref<ChatChannel[]>([]);
-  const currentChannel = ref<ChatChannel | null>(null);
+  const channels = ref<Chat[]>([]);
+  const currentChannel = ref<Chat | null>(null);
   const onlineUsers = ref<ChatUser[]>([]);
   const typingUsers = ref<Set<number>>(new Set());
   const isConnected = ref(false);
@@ -90,7 +90,7 @@ export const useChat = () => {
 
     try {
       // Usar o serviço para enviar mensagem
-      const newMessage = await chatService.sendMessage(
+      const newMessage = await chatService.sendMessageToChat(
         currentChannel.value?.id || 1,
         message
       );
@@ -146,8 +146,8 @@ export const useChat = () => {
 
     try {
       // Usar o serviço para carregar mensagens
-      const loadedMessages = await chatService.getMessages(channelId);
-      messages.value = loadedMessages;
+      const response = await chatService.getChatMessages(channelId);
+      messages.value = response.messages;
       scrollToBottom();
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro ao carregar mensagens';
@@ -161,13 +161,13 @@ export const useChat = () => {
   const loadChannels = async () => {
     try {
       // Usar o serviço para carregar canais
-      const loadedChannels = await chatService.getChannels();
-      channels.value = loadedChannels;
+      const response = await chatService.getConversations();
+      channels.value = response.chats;
       
       // Definir canal padrão
-      if (!currentChannel.value && loadedChannels.length > 0) {
-        currentChannel.value = loadedChannels[0];
-        await loadMessages(loadedChannels[0].id);
+      if (!currentChannel.value && response.chats.length > 0) {
+        currentChannel.value = response.chats[0];
+        await loadMessages(response.chats[0].id);
       }
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro ao carregar canais';
@@ -176,13 +176,14 @@ export const useChat = () => {
   };
 
   // Função para trocar de canal
-  const switchChannel = async (channel: Readonly<ChatChannel>) => {
-    currentChannel.value = { ...channel, participants: [...channel.participants] };
+  const switchChannel = async (channel: Readonly<Chat>) => {
+    currentChannel.value = { ...channel };
     await loadMessages(channel.id);
     
     // Marcar mensagens como lidas
     try {
-      await chatService.markAsRead(channel.id);
+      // Implementar quando a API estiver disponível
+      // await chatService.markAsRead(channel.id);
     } catch (err) {
       console.error('Error marking messages as read:', err);
     }
@@ -198,15 +199,15 @@ export const useChat = () => {
     });
   };
 
-  // Computed para usuários digitando
+  // Computed para texto de digitação
   const typingText = computed(() => {
     if (typingUsers.value.size === 0) return '';
     
     const typingUserNames = Array.from(typingUsers.value).map(userId => {
       const user = onlineUsers.value.find(u => u.id === userId);
-      return user?.name || 'Alguém';
+      return user ? user.name : 'Alguém';
     });
-
+    
     if (typingUserNames.length === 1) {
       return `${typingUserNames[0]} está digitando...`;
     } else if (typingUserNames.length === 2) {
@@ -218,7 +219,14 @@ export const useChat = () => {
 
   // Computed para mensagens formatadas
   const formattedMessages = computed(() => {
-    return messages.value.map(message => chatService.formatMessage(message));
+    return messages.value.map(message => ({
+      ...message,
+      time: new Date(message.created_at).toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      isOwn: message.user_id === currentUser.value?.id
+    }));
   });
 
   return {
@@ -227,16 +235,14 @@ export const useChat = () => {
     channels: readonly(channels),
     currentChannel: readonly(currentChannel),
     onlineUsers: readonly(onlineUsers),
-    typingUsers: readonly(typingUsers),
     isConnected: readonly(isConnected),
     loading: readonly(loading),
     error: readonly(error),
-
+    
     // Computed
     typingText,
     formattedMessages,
-    currentUser,
-
+    
     // Funções
     connectToChat,
     disconnectFromChat,

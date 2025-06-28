@@ -181,7 +181,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
-import type { ChatChannel } from '~/types/chat';
+import type { Chat } from '~/types/chat';
 
 // Estados locais
 const isOpen = ref(false);

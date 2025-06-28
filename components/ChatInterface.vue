@@ -86,7 +86,7 @@
               </span>
             </div>
             <p class="text-body-2 text-grey conversation-preview">
-              {{ chat.last_message?.content || 'Nenhuma mensagem ainda' }}
+              {{ chat.last_message?.message || 'Nenhuma mensagem ainda' }}
             </p>
           </div>
         </div>
@@ -168,12 +168,12 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, watch } from 'vue';
-import type { ChatMessage, ChatChannel } from '~/types/chat';
+import type { ChatMessage, Chat } from '~/types/chat';
 
 // Props
 interface Props {
-  initialChat?: Readonly<ChatChannel> | null;
-  initialUser?: any; // Usuário para iniciar chat
+  initialUser?: Readonly<{ id: number; name: string; email: string }> | null;
+  initialChat?: Readonly<Chat> | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -219,7 +219,7 @@ const chatTitle = computed(() => {
 
 // Funções
 const closeChat = () => {
-  currentChat.value = null;
+  emit('close');
 };
 
 const handleSendMessage = async () => {

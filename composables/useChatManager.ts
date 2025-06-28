@@ -1,10 +1,6 @@
+import { ref, computed, readonly } from 'vue';
 import { ChatService } from '~/services/ChatService';
-import type { 
-  Chat, 
-  ChatMessage, 
-  ChatConversation, 
-  ChatListResponse 
-} from '~/types/chat';
+import type { ChatMessage, Chat } from '~/types/chat';
 
 export const useChatManager = () => {
   // Estados reativos
@@ -13,25 +9,16 @@ export const useChatManager = () => {
   const messages = ref<ChatMessage[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
-  const pagination = ref({
-    current_page: 1,
-    per_page: 20,
-    total: 0,
-    last_page: 1
-  });
+  const pagination = ref<any>(null);
+
+  // Usuário atual
+  const currentUser = useAuth().user;
 
   // Instância do serviço
   const chatService = new ChatService();
 
-  // Instância do Echo
-  const { $echo, $listenToChat, $stopListeningToChat } = useNuxtApp();
-
-  // Dados do usuário atual
-  const { user } = useAuth();
-  const currentUser = computed(() => user.value);
-
   /**
-   * Carregar lista de conversas
+   * Carregar conversas
    */
   const loadConversations = async (page: number = 1) => {
     loading.value = true;
@@ -39,7 +26,7 @@ export const useChatManager = () => {
 
     try {
       const response = await chatService.getConversations(page);
-      conversations.value = response.chats;
+      conversations.value = response.chats || [];
       pagination.value = response.pagination;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro ao carregar conversas';
@@ -65,7 +52,10 @@ export const useChatManager = () => {
         conversations.value.unshift(chat);
       }
 
-      // Retornar o chat criado (não definir como atual automaticamente)
+      // Definir como chat atual
+      currentChat.value = chat;
+
+      // Retornar o chat criado
       return chat;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro ao iniciar chat';
@@ -139,6 +129,12 @@ export const useChatManager = () => {
         conversations.value.unshift(response.chat);
       }
 
+      // Definir como chat atual
+      currentChat.value = response.chat;
+
+      // Adicionar mensagem à lista
+      messages.value.push(response.message);
+
       return response;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro ao enviar mensagem';
@@ -151,27 +147,11 @@ export const useChatManager = () => {
    * Selecionar chat
    */
   const selectChat = async (chat: Readonly<Chat>) => {
-    // Parar de escutar o chat anterior se houver
-    if (currentChat.value) {
-      $stopListeningToChat(currentChat.value.id);
-    }
-
     currentChat.value = { 
-      ...chat, 
-      participants: chat.participants ? [...chat.participants] : undefined 
+      ...chat
     } as Chat;
     
     await loadChatMessages(chat.id);
-
-    // Escutar mensagens do novo chat
-    $listenToChat(chat.id, (message: any) => {
-      messages.value.push(message);
-      // Atualizar última mensagem na conversa
-      if (currentChat.value) {
-        currentChat.value.last_message = message;
-        currentChat.value.unread_count = 0;
-      }
-    });
   };
 
   /**
@@ -192,7 +172,7 @@ export const useChatManager = () => {
    * Verificar se mensagem é própria
    */
   const isOwnMessage = (message: ChatMessage): boolean => {
-    return message.sender_id === currentUser.value?.id && message.sender_type === 'admin';
+    return message.user_id === currentUser.value?.id;
   };
 
   /**

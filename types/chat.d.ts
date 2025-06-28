@@ -18,9 +18,18 @@ export interface ChatUser {
   last_seen?: string;
 }
 
+export interface Chat {
+  id: number;
+  type: 'private' | 'group';
+  name: string | null;
+  description: string | null;
+  last_message?: ChatMessage;
+  unread_count: number;
+}
+
 export interface ChatChannel {
   id: number;
-  name: string;
+  name: string | null;
   type: 'public' | 'private' | 'direct';
   participants: ChatUser[];
   last_message?: ChatMessage;
@@ -38,4 +47,44 @@ export interface TypingEvent {
   user_name: string;
   channel_id: number;
   is_typing: boolean;
+}
+
+// Tipos para respostas da API
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+export interface ChatResponse {
+  chat: Chat;
+}
+
+export interface MessageResponse {
+  message: ChatMessage;
+}
+
+export interface ChatMessageResponse {
+  chat: Chat;
+  message: ChatMessage;
+}
+
+export interface ConversationsResponse {
+  chats: Chat[];
+  pagination: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+}
+
+export interface MessagesResponse {
+  messages: ChatMessage[];
+  pagination: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
 } 
