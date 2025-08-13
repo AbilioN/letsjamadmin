@@ -236,12 +236,12 @@ export const useChatManager = () => {
     try {
       console.log('🔔 setupPusherListener iniciado');
       
-      // Obter instância do Echo do plugin
-      const { $echo } = useNuxtApp();
-      console.log('🔔 Echo obtido:', $echo);
+      // Obter instância do Pusher do plugin
+      const { $pusher } = useNuxtApp();
+      console.log('🔔 Pusher obtido:', $pusher);
       
-      if (!$echo) {
-        console.warn('⚠️ Echo não disponível para Pusher listener');
+      if (!$pusher) {
+        console.warn('⚠️ Pusher não disponível para listener');
         return;
       }
 
@@ -260,10 +260,10 @@ export const useChatManager = () => {
           console.log('🔔 Configurando listener para canal:', channelName);
 
           try {
-            const channel = $echo.channel(channelName);
-            console.log('🔔 Canal criado:', channel);
+            const channel = $pusher.subscribe(channelName);
+            console.log('🔔 Canal inscrito:', channel);
             
-            channel.listen(PUSHER_EVENTS.MESSAGE_SENT, (event: PusherMessageSentEvent) => {
+            channel.bind(PUSHER_EVENTS.MESSAGE_SENT, (event: PusherMessageSentEvent) => {
               console.log('🔔 Nova mensagem recebida via Pusher:', event);
               
               const newMessage: ChatMessage = {
@@ -324,21 +324,22 @@ export const useChatManager = () => {
     try {
       console.log('🧪 Testando conexão do Pusher...');
       
-      const { $echo } = useNuxtApp();
-      if (!$echo) {
-        console.error('❌ Echo não disponível para teste');
+      const { $pusher } = useNuxtApp();
+      if (!$pusher) {
+        console.error('❌ Pusher não disponível para teste');
         return;
       }
 
       // Testar conexão com um canal público
-      const testChannel = $echo.channel('test-channel');
+      const testChannel = $pusher.subscribe('test-channel');
       
-      testChannel.subscribed(() => {
+      testChannel.bind('pusher:subscription_succeeded', () => {
         console.log('✅ Conectado ao canal de teste');
-        
-        // Testar envio de evento
-        testChannel.whisper('test-event', { message: 'Teste de conexão' });
-        console.log('✅ Evento de teste enviado');
+        console.log('✅ Connection ID:', $pusher.connection.connection.id);
+      });
+
+      testChannel.bind('pusher:subscription_error', (status: any) => {
+        console.error('❌ Erro na inscrição:', status);
       });
 
       console.log('🧪 Teste de conexão iniciado');
@@ -352,12 +353,12 @@ export const useChatManager = () => {
    */
   const cleanupPusherListener = () => {
     try {
-      const { $echo } = useNuxtApp();
+      const { $pusher } = useNuxtApp();
       
-      if ($echo) {
+      if ($pusher) {
         console.log('🔔 Limpando listener do Pusher...');
-        // O Echo automaticamente limpa os listeners quando desconecta
-        $echo.disconnect();
+        // O Pusher automaticamente limpa os listeners quando desconecta
+        $pusher.disconnect();
       }
     } catch (error) {
       console.error('❌ Erro ao limpar listener do Pusher:', error);

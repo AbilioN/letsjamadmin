@@ -1,4 +1,3 @@
-import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import { getPusherConfig } from '~/config/pusher';
 
@@ -10,10 +9,7 @@ declare global {
 }
 
 export default defineNuxtPlugin(() => {
-  const config = useRuntimeConfig();
-  
-  console.log('🔌 Plugin Echo iniciando...');
-  console.log('🔌 Runtime config:', config);
+  console.log('🔌 Plugin Pusher iniciando...');
 
   // Configuração do Pusher
   window.Pusher = Pusher;
@@ -23,25 +19,18 @@ export default defineNuxtPlugin(() => {
   const pusherConfig = getPusherConfig();
   console.log('🔌 Configuração Pusher:', pusherConfig);
 
-  // Criar instância do Echo
-  const echo = new Echo({
-    ...pusherConfig,
-    // Configurações adicionais para autenticação
-    auth: {
-      headers: {
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-        'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
-      }
-    }
+  // Criar instância do Pusher
+  const pusher = new Pusher(pusherConfig.key, {
+    cluster: pusherConfig.cluster,
+    forceTLS: pusherConfig.forceTLS
   });
 
-  console.log('🔌 Instância Echo criada:', echo);
-  console.log('🔌 Token de autenticação:', localStorage.getItem('auth_token'));
+  console.log('🔌 Instância Pusher criada:', pusher);
 
-  // Fornecer Echo globalmente
+  // Fornecer Pusher globalmente
   return {
     provide: {
-      echo
+      pusher
     }
   };
 }); 

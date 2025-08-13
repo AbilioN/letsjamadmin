@@ -26,8 +26,8 @@ scheme: 'https'
 
 **Para mais detalhes de configuração, consulte:** [`docs/PUSHER_CONFIGURATION.md`](./PUSHER_CONFIGURATION.md)
 
-### Plugin Echo
-O plugin `echo.client.ts` configura o Laravel Echo com Pusher e fornece autenticação automática.
+### Plugin Pusher
+O plugin `echo.client.ts` configura o Pusher diretamente e fornece a instância globalmente.
 
 ## Eventos Suportados
 
