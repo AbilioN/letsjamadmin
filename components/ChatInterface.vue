@@ -36,7 +36,7 @@
       </div>
     </div>
 
-    <!-- Lista de Conversas -->
+    <!-- Lista de Chats -->
     <div v-if="!currentChat && !initialUser" class="conversations-list">
       <div v-if="loading" class="text-center pa-4">
         <v-progress-circular indeterminate color="primary" />
@@ -48,21 +48,21 @@
         </v-alert>
       </div>
 
-      <div v-else-if="conversations.length === 0" class="text-center pa-8">
+      <div v-else-if="chats.length === 0" class="text-center pa-8">
         <v-icon size="64" color="grey" class="mb-4">mdi-chat-outline</v-icon>
-        <h3 class="text-h6 mb-2">Nenhuma conversa</h3>
+        <h3 class="text-h6 mb-2">Nenhum chat</h3>
         <p class="text-body-2 text-grey">
-          Inicie uma conversa com um usuário para começar a conversar.
+          Inicie um chat com um usuário para começar a conversar.
         </p>
       </div>
 
-      <div v-else class="conversations">
+      <div v-else class="chats">
         <div
-          v-for="chat in conversations"
-          :key="chat.id"
+          v-for="(chat, index) in chats"
+          :key="index"
           @click="selectChat(chat)"
           class="conversation-item"
-          :class="{ 'active': currentChat?.id === chat.id }"
+          :class="{ 'active': currentChat?.id === chat?.id }"
         >
           <div class="conversation-avatar">
             <v-avatar size="48" color="primary">
@@ -86,7 +86,7 @@
               </span>
             </div>
             <p class="text-body-2 text-grey conversation-preview">
-              {{ chat.last_message?.message || 'Nenhuma mensagem ainda' }}
+              {{ chat.last_message?.content || 'Nenhuma mensagem ainda' }}
             </p>
           </div>
         </div>
@@ -115,7 +115,7 @@
           <v-icon size="64" color="grey" class="mb-4">mdi-message-outline</v-icon>
           <h3 class="text-h6 mb-2">Nenhuma mensagem</h3>
           <p class="text-body-2 text-grey">
-            {{ initialUser ? `Inicie uma conversa com ${initialUser.name}!` : 'Seja o primeiro a enviar uma mensagem!' }}
+            {{ initialUser ? `Inicie um chat com ${initialUser.name}!` : 'Seja o primeiro a enviar uma mensagem!' }}
           </p>
         </div>
 
@@ -131,7 +131,7 @@
                 <span class="message-author">{{ getMessageAuthor(message) }}</span>
                 <span class="message-time">{{ message.time }}</span>
               </div>
-              <div class="message-text">{{ message.message }}</div>
+              <div class="message-text">{{ message.content }}</div>
             </div>
           </div>
         </div>
@@ -192,19 +192,21 @@ const messagesContainer = ref<HTMLElement>();
 
 // Composable de chat
 const {
-  conversations,
+  chats,
   currentChat,
   messages,
   loading,
   error,
   formattedMessages,
-  loadConversations,
+  loadChats,
   selectChat,
   sendMessage,
   startChatWithUser,
   getChatDisplayName,
   formatMessage
 } = useChatManager();
+
+
 
 // Computed
 const chatTitle = computed(() => {
@@ -284,7 +286,7 @@ const formatTime = (dateString?: string) => {
   });
 };
 
-const getMessageAuthor = (message: ChatMessage & { isOwn: boolean; time: string }) => {
+const getMessageAuthor = (message: ChatMessage & { isOwn: boolean; time: string; user_name: string }) => {
   if (message.isOwn) {
     return 'Você';
   }
@@ -293,7 +295,7 @@ const getMessageAuthor = (message: ChatMessage & { isOwn: boolean; time: string 
 
 // Lifecycle
 onMounted(async () => {
-  await loadConversations();
+  await loadChats();
   await initializeChat();
 });
 
@@ -342,7 +344,7 @@ console.log('🎯 ChatInterface carregado com initialChat:', props.initialChat, 
   overflow-y: auto;
 }
 
-.conversations {
+.chats {
   padding: 8px;
 }
 

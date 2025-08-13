@@ -11,9 +11,9 @@ export class ApiClient implements IHttpClient {
   private defaultHeaders: Record<string, string>;
   private timeout: number;
 
-  constructor() {
+  constructor(customBaseURL?: string) {
     const config = getApiConfig();
-    this.baseURL = config.baseURL;
+    this.baseURL = customBaseURL || config.baseURL;
     this.timeout = config.timeout;
     this.defaultHeaders = {
       'Content-Type': 'application/json',

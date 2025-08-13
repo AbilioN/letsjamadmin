@@ -5,7 +5,7 @@ import type {
   ChatResponse, 
   MessageResponse, 
   ChatMessageResponse,
-  ConversationsResponse,
+  ChatsResponse,
   MessagesResponse
 } from '~/types/chat';
 
@@ -22,7 +22,7 @@ export class ChatService {
   async createPrivateChat(otherUserId: number, otherUserType: 'user' | 'admin'): Promise<Chat> {
     try {
       const response = await this.chatRepository.createPrivateChat(otherUserId, otherUserType);
-      return response.chat;
+      return response;
     } catch (error) {
       console.error('ChatService - createPrivateChat error:', error);
       throw error;
@@ -35,7 +35,7 @@ export class ChatService {
   async createGroupChat(name: string, description: string, participants: Array<{ user_id: number; user_type: 'user' | 'admin' }>): Promise<Chat> {
     try {
       const response = await this.chatRepository.createGroupChat(name, description, participants);
-      return response.chat;
+      return response;
     } catch (error) {
       console.error('ChatService - createGroupChat error:', error);
       throw error;
@@ -73,12 +73,16 @@ export class ChatService {
         throw new Error('Mensagem não pode estar vazia');
       }
 
+      if (!content.trim()) {
+        throw new Error('Mensagem não pode estar vazia');
+      }
+
       if (content.length > 1000) {
         throw new Error('Mensagem muito longa (máximo 1000 caracteres)');
       }
 
       const response = await this.chatRepository.sendMessageToChat(chatId, content.trim());
-      return response.message;
+      return response;
     } catch (error) {
       console.error('ChatService - sendMessageToChat error:', error);
       throw error;
@@ -100,11 +104,11 @@ export class ChatService {
   /**
    * Listar todos os chats do usuário
    */
-  async getConversations(page: number = 1, perPage: number = 20): Promise<ConversationsResponse> {
+  async getChats(page: number = 1, perPage: number = 20): Promise<ChatsResponse> {
     try {
-      return await this.chatRepository.getConversations(page, perPage);
+      return await this.chatRepository.getChats(page, perPage);
     } catch (error) {
-      console.error('ChatService - getConversations error:', error);
+      console.error('ChatService - getChats error:', error);
       throw error;
     }
   }
@@ -127,6 +131,7 @@ export class ChatService {
   formatMessage(message: ChatMessage): ChatMessage & { 
     time: string; 
     isOwn: boolean; 
+    user_name: string;
   } {
     const currentUser = useAuth().user.value;
     
@@ -136,7 +141,8 @@ export class ChatService {
         hour: '2-digit',
         minute: '2-digit'
       }),
-      isOwn: message.user_id === currentUser?.id
+      isOwn: message.sender_id === currentUser?.id,
+      user_name: message.sender_type === 'admin' ? 'Admin' : 'Usuário'
     };
   }
 

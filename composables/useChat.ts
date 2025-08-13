@@ -161,7 +161,7 @@ export const useChat = () => {
   const loadChannels = async () => {
     try {
       // Usar o serviço para carregar canais
-      const response = await chatService.getConversations();
+      const response = await chatService.getChats();
       channels.value = response.chats;
       
       // Definir canal padrão

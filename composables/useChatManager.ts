@@ -1,10 +1,10 @@
 import { ref, computed, readonly } from 'vue';
 import { ChatService } from '~/services/ChatService';
-import type { ChatMessage, Chat } from '~/types/chat';
+import type { ChatMessage, Chat, ChatsResponse } from '~/types/chat';
 
 export const useChatManager = () => {
   // Estados reativos
-  const conversations = ref<Chat[]>([]);
+  const chats = ref<Chat[]>([]);
   const currentChat = ref<Chat | null>(null);
   const messages = ref<ChatMessage[]>([]);
   const loading = ref(false);
@@ -18,19 +18,20 @@ export const useChatManager = () => {
   const chatService = new ChatService();
 
   /**
-   * Carregar conversas
+   * Carregar chats
    */
-  const loadConversations = async (page: number = 1) => {
+  const loadChats = async (page: number = 1): Promise<void> => {
     loading.value = true;
     error.value = null;
 
     try {
-      const response = await chatService.getConversations(page);
-      conversations.value = response.chats || [];
+      const response: ChatsResponse = await chatService.getChats(page);
+      console.log(response);
+      chats.value = response.chats || [];
       pagination.value = response.pagination;
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Erro ao carregar conversas';
-      console.error('Load conversations error:', err);
+      error.value = err instanceof Error ? err.message : 'Erro ao carregar chats';
+      console.error('Load chats error:', err);
     } finally {
       loading.value = false;
     }
@@ -46,10 +47,10 @@ export const useChatManager = () => {
     try {
       const chat = await chatService.createPrivateChat(userId, userType);
       
-      // Adicionar à lista de conversas se não existir
-      const existingChat = conversations.value.find(c => c.id === chat.id);
+      // Adicionar à lista de chats se não existir
+      const existingChat = chats.value.find(c => c.id === chat.id);
       if (!existingChat) {
-        conversations.value.unshift(chat);
+        chats.value.unshift(chat);
       }
 
       // Definir como chat atual
@@ -124,9 +125,9 @@ export const useChatManager = () => {
       const response = await chatService.sendMessageToUser(content, userId, userType);
       
       // Adicionar chat à lista se não existir
-      const existingChat = conversations.value.find(c => c.id === response.chat.id);
+      const existingChat = chats.value.find(c => c.id === response.chat.id);
       if (!existingChat) {
-        conversations.value.unshift(response.chat);
+        chats.value.unshift(response.chat);
       }
 
       // Definir como chat atual
@@ -172,21 +173,21 @@ export const useChatManager = () => {
    * Verificar se mensagem é própria
    */
   const isOwnMessage = (message: ChatMessage): boolean => {
-    return message.user_id === currentUser.value?.id;
+    return message.sender_id === currentUser.value?.id;
   };
 
   /**
-   * Obter conversas não lidas
+   * Obter chats não lidos
    */
-  const unreadConversations = computed(() => {
-    return conversations.value.filter(chat => chat.unread_count > 0);
+  const unreadChats = computed(() => {
+    return chats.value.filter(chat => chat.unread_count > 0);
   });
 
   /**
    * Total de mensagens não lidas
    */
   const totalUnread = computed(() => {
-    return conversations.value.reduce((total, chat) => total + chat.unread_count, 0);
+    return chats.value.reduce((total, chat) => total + chat.unread_count, 0);
   });
 
   /**
@@ -198,7 +199,7 @@ export const useChatManager = () => {
 
   return {
     // Estados
-    conversations: readonly(conversations),
+    chats: readonly(chats) as ComputedRef<Chat[]>,
     currentChat: readonly(currentChat),
     messages: readonly(messages),
     loading: readonly(loading),
@@ -206,13 +207,13 @@ export const useChatManager = () => {
     pagination: readonly(pagination),
 
     // Computed
-    unreadConversations,
+    unreadChats,
     totalUnread,
     formattedMessages,
     currentUser,
 
     // Funções
-    loadConversations,
+    loadChats,
     startChatWithUser,
     loadChatMessages,
     sendMessage,

@@ -1,12 +1,16 @@
 // Tipos para o sistema de chat
 export interface ChatMessage {
   id: number;
-  user_id: number;
-  user_name: string;
-  user_avatar?: string;
-  message: string;
+  chat_id: number;
+  content: string;
+  sender_id: number;
+  sender_type: 'user' | 'admin';
+  message_type: 'text' | 'image' | 'file' | 'audio' | 'video';
+  metadata: any | null;
+  is_read: boolean;
+  read_at: string | null;
   created_at: string;
-  updated_at: string;
+  updated_at: string | null;
 }
 
 export interface ChatUser {
@@ -25,6 +29,9 @@ export interface Chat {
   description: string | null;
   last_message?: ChatMessage;
   unread_count: number;
+  participants_count?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ChatChannel {
@@ -56,35 +63,40 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-export interface ChatResponse {
-  chat: Chat;
+export interface ChatResponse extends Chat {
+  participants_count: number;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface MessageResponse {
-  message: ChatMessage;
-}
+export interface MessageResponse extends ChatMessage {}
 
 export interface ChatMessageResponse {
-  chat: Chat;
-  message: ChatMessage;
+  chat: ChatResponse;
+  message: MessageResponse;
 }
 
-export interface ConversationsResponse {
+export interface ChatsResponse {
   chats: Chat[];
   pagination: {
     current_page: number;
     per_page: number;
     total: number;
     last_page: number;
+    from: number;
+    to: number;
   };
 }
 
 export interface MessagesResponse {
   messages: ChatMessage[];
+  from_cache: boolean;
   pagination: {
     current_page: number;
     per_page: number;
     total: number;
     last_page: number;
+    from: number;
+    to: number;
   };
 } 
