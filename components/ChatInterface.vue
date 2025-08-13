@@ -370,7 +370,7 @@ console.log('🎯 ChatInterface carregado com initialChat:', props.initialChat, 
 .chat-interface {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 600px; /* Altura fixa do chat */
   background-color: #f8f9fa;
 }
 
@@ -379,6 +379,8 @@ console.log('🎯 ChatInterface carregado com initialChat:', props.initialChat, 
   color: white;
   padding: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  height: 80px; /* Altura fixa do header */
+  flex-shrink: 0; /* Não permite que o header encolha */
 }
 
 .conversations-list {
@@ -447,6 +449,7 @@ console.log('🎯 ChatInterface carregado com initialChat:', props.initialChat, 
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  height: 400px; /* Altura fixa para as mensagens */
 }
 
 .messages-list {
@@ -503,6 +506,8 @@ console.log('🎯 ChatInterface carregado com initialChat:', props.initialChat, 
   background-color: white;
   border-top: 1px solid #e0e0e0;
   padding: 16px;
+  height: 80px; /* Altura fixa do input */
+  flex-shrink: 0; /* Não permite que o input encolha */
 }
 
 /* Scrollbar personalizada */
