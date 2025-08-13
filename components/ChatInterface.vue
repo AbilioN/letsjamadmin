@@ -58,11 +58,11 @@
 
       <div v-else class="chats">
         <div
-          v-for="(chat, index) in chats"
-          :key="index"
+          v-for="chat in (chats as any[])"
+          :key="chat.id"
           @click="selectChat(chat)"
           class="conversation-item"
-          :class="{ 'active': currentChat?.id === chat?.id }"
+          :class="{ 'active': currentChat?.id === chat.id }"
         >
           <div class="conversation-avatar">
             <v-avatar size="48" color="primary">
@@ -199,6 +199,7 @@ const {
   error,
   formattedMessages,
   loadChats,
+  loadChatMessages,
   selectChat,
   sendMessage,
   startChatWithUser,
@@ -218,6 +219,8 @@ const chatTitle = computed(() => {
   }
   return 'Chat';
 });
+
+
 
 // Funções
 const closeChat = () => {
@@ -267,7 +270,14 @@ const initializeChat = async () => {
   if (props.initialUser && !currentChat.value) {
     try {
       console.log('🚀 Iniciando chat com usuário:', props.initialUser);
-      await startChatWithUser(props.initialUser.id, 'user');
+      const chat = await startChatWithUser(props.initialUser.id, 'user');
+      
+      // Após criar o chat, carregar as mensagens diretamente
+      if (chat && chat.id) {
+        console.log('📥 Carregando mensagens do chat criado:', chat.id);
+        // Usar o loadChatMessages do useChatManager
+        await loadChatMessages(chat.id);
+      }
     } catch (err) {
       console.error('Erro ao inicializar chat:', err);
     }
@@ -303,7 +313,10 @@ const getMessageAuthor = (message: ChatMessage & { isOwn: boolean; time: string;
 
 // Lifecycle
 onMounted(async () => {
-  await loadChats();
+  // Só carregar todos os chats se não houver usuário específico
+  if (!props.initialUser) {
+    await loadChats();
+  }
   await initializeChat();
 });
 

@@ -89,6 +89,18 @@ export interface ChatMessageSendResponse {
   data: ChatMessageResponse;
 }
 
+// Wrapper da API para buscar mensagens
+export interface MessagesFetchResponse {
+  success: boolean;
+  data: MessagesResponse;
+}
+
+// Wrapper da API para buscar chats
+export interface ChatsFetchResponse {
+  success: boolean;
+  data: ChatsResponse;
+}
+
 export interface MessageResponse extends ChatMessage {}
 
 export interface ChatMessageResponse {

@@ -78,14 +78,19 @@ export const useChatManager = () => {
    * Carregar mensagens de um chat
    */
   const loadChatMessages = async (chatId: number, page: number = 1) => {
+    console.log('📥 loadChatMessages chamado para chat ID:', chatId);
     loading.value = true;
     error.value = null;
 
     try {
       const response = await chatService.getChatMessages(chatId, page);
+      console.log('📥 Resposta do getChatMessages:', response);
+      console.log('📥 Messages array:', response.messages);
+      console.log('📥 Messages length:', response.messages?.length);
       
       if (page === 1) {
         messages.value = response.messages;
+        console.log('📥 Messages definidos:', messages.value);
       } else {
         // Para paginação, adicionar mensagens no início
         messages.value.unshift(...response.messages);
@@ -161,9 +166,14 @@ export const useChatManager = () => {
    * Selecionar chat
    */
   const selectChat = async (chat: Readonly<Chat>) => {
+    console.log('🎯 selectChat chamado com:', chat);
+    console.log('🎯 Chat ID:', chat.id);
+    
     currentChat.value = { 
       ...chat
     } as Chat;
+    
+    console.log('🎯 CurrentChat definido:', currentChat.value);
     
     await loadChatMessages(chat.id);
   };
@@ -207,7 +217,14 @@ export const useChatManager = () => {
    * Mensagens formatadas
    */
   const formattedMessages = computed(() => {
-    return messages.value.map(message => formatMessage(message));
+    console.log('🎨 formattedMessages computed chamada');
+    console.log('🎨 messages.value:', messages.value);
+    console.log('🎨 messages.value.length:', messages.value.length);
+    
+    const formatted = messages.value.map(message => formatMessage(message));
+    console.log('🎨 formatted result:', formatted);
+    
+    return formatted;
   });
 
   return {

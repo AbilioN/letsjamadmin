@@ -9,7 +9,9 @@ import type {
   ChatMessageResponse,
   ChatMessageSendResponse,
   ChatsResponse,
-  MessagesResponse
+  ChatsFetchResponse,
+  MessagesResponse,
+  MessagesFetchResponse
 } from '~/types/chat';
 
 export class ChatService {
@@ -119,7 +121,27 @@ export class ChatService {
    */
   async getConversation(otherUserId: number, otherUserType: 'user' | 'admin', page: number = 1, perPage: number = 50): Promise<MessagesResponse> {
     try {
-      return await this.chatRepository.getConversation(otherUserId, otherUserType, page, perPage);
+      const response = await this.chatRepository.getConversation(otherUserId, otherUserType, page, perPage);
+      
+      console.log('🔍 ChatService - getConversation response:', response);
+      console.log('🔍 ChatService - response type:', typeof response);
+      console.log('🔍 ChatService - response keys:', Object.keys(response || {}));
+      
+      // Verificar se a resposta tem o formato wrapper { success: true, data: ... }
+      if (response && typeof response === 'object' && 'success' in response && 'data' in response) {
+        const wrappedResponse = response as MessagesFetchResponse;
+        if (wrappedResponse.success && wrappedResponse.data) {
+          return wrappedResponse.data;
+        }
+        throw new Error('Resposta inválida da API ao buscar conversa');
+      }
+      
+      // Se não tem wrapper, verificar se é diretamente o formato esperado
+      if (response && typeof response === 'object' && 'messages' in response && 'pagination' in response) {
+        return response as MessagesResponse;
+      }
+      
+      throw new Error('Formato de resposta inesperado da API');
     } catch (error) {
       console.error('ChatService - getConversation error:', error);
       throw error;
@@ -131,7 +153,27 @@ export class ChatService {
    */
   async getChats(page: number = 1, perPage: number = 20): Promise<ChatsResponse> {
     try {
-      return await this.chatRepository.getChats(page, perPage);
+      const response = await this.chatRepository.getChats(page, perPage);
+      
+      console.log('🔍 ChatService - getChats response:', response);
+      console.log('🔍 ChatService - response type:', typeof response);
+      console.log('🔍 ChatService - response keys:', Object.keys(response || {}));
+      
+      // Verificar se a resposta tem o formato wrapper { success: true, data: ... }
+      if (response && typeof response === 'object' && 'success' in response && 'data' in response) {
+        const wrappedResponse = response as ChatsFetchResponse;
+        if (wrappedResponse.success && wrappedResponse.data) {
+          return wrappedResponse.data;
+        }
+        throw new Error('Resposta inválida da API ao buscar chats');
+      }
+      
+      // Se não tem wrapper, verificar se é diretamente o formato esperado
+      if (response && typeof response === 'object' && 'chats' in response && 'pagination' in response) {
+        return response as ChatsResponse;
+      }
+      
+      throw new Error('Formato de resposta inesperado da API');
     } catch (error) {
       console.error('ChatService - getChats error:', error);
       throw error;
@@ -143,7 +185,27 @@ export class ChatService {
    */
   async getChatMessages(chatId: number, page: number = 1, perPage: number = 50): Promise<MessagesResponse> {
     try {
-      return await this.chatRepository.getChatMessages(chatId, page, perPage);
+      const response = await this.chatRepository.getChatMessages(chatId, page, perPage);
+      
+      console.log('🔍 ChatService - getChatMessages response:', response);
+      console.log('🔍 ChatService - response type:', typeof response);
+      console.log('🔍 ChatService - response keys:', Object.keys(response || {}));
+      
+      // Verificar se a resposta tem o formato wrapper { success: true, data: ... }
+      if (response && typeof response === 'object' && 'success' in response && 'data' in response) {
+        const wrappedResponse = response as MessagesFetchResponse;
+        if (wrappedResponse.success && wrappedResponse.data) {
+          return wrappedResponse.data;
+        }
+        throw new Error('Resposta inválida da API ao buscar mensagens do chat');
+      }
+      
+      // Se não tem wrapper, verificar se é diretamente o formato esperado
+      if (response && typeof response === 'object' && 'messages' in response && 'pagination' in response) {
+        return response as MessagesResponse;
+      }
+      
+      throw new Error('Formato de resposta inesperado da API');
     } catch (error) {
       console.error('ChatService - getChatMessages error:', error);
       throw error;

@@ -11,7 +11,9 @@ import type {
   ChatMessageResponse,
   ChatMessageSendResponse,
   ChatsResponse,
-  MessagesResponse
+  ChatsFetchResponse,
+  MessagesResponse,
+  MessagesFetchResponse
 } from '~/types/chat';
 
 export class ChatRepository {
@@ -45,9 +47,10 @@ export class ChatRepository {
   /**
    * Buscar conversa entre dois usuários
    */
-  async getConversation(otherUserId: number, otherUserType: 'user' | 'admin', page: number = 1, perPage: number = 50): Promise<MessagesResponse> {
+  async getConversation(otherUserId: number, otherUserType: 'user' | 'admin', page: number = 1, perPage: number = 50): Promise<any> {
     try {
-      const response = await this.chatApiClient.get<MessagesResponse>(`/chat/conversation?other_user_type=${otherUserType}&other_user_id=${otherUserId}&page=${page}&per_page=${perPage}`);
+      const response = await this.chatApiClient.get<any>(`/chat/conversation?other_user_type=${otherUserType}&other_user_id=${otherUserId}&page=${page}&per_page=${perPage}`);
+      console.log('🔍 ChatRepository - getConversation raw response:', response);
       return response;
     } catch (error) {
       console.error('ChatRepository - getConversation error:', error);
@@ -58,9 +61,10 @@ export class ChatRepository {
   /**
    * Listar todos os chats do usuário
    */
-  async getChats(page: number = 1, perPage: number = 20): Promise<ChatsResponse> {
+  async getChats(page: number = 1, perPage: number = 20): Promise<any> {
     try {
-      const response = await this.chatApiClient.get<ChatsResponse>(`/chats?page=${page}&per_page=${perPage}`);
+      const response = await this.chatApiClient.get<any>(`/chats?page=${page}&per_page=${perPage}`);
+      console.log('🔍 ChatRepository - getChats raw response:', response);
       return response;
     } catch (error) {
       console.error('ChatRepository - getChats error:', error);
@@ -71,9 +75,10 @@ export class ChatRepository {
   /**
    * Buscar mensagens de um chat específico
    */
-  async getChatMessages(chatId: number, page: number = 1, perPage: number = 50): Promise<MessagesResponse> {
+  async getChatMessages(chatId: number, page: number = 1, perPage: number = 50): Promise<any> {
     try {
-      const response = await this.chatApiClient.get<MessagesResponse>(`/chat/${chatId}/messages?page=${page}&per_page=${perPage}`);
+      const response = await this.chatApiClient.get<any>(`/chat/${chatId}/messages?page=${page}&per_page=${perPage}`);
+      console.log('🔍 ChatRepository - getChatMessages raw response:', response);
       return response;
     } catch (error) {
       console.error('ChatRepository - getChatMessages error:', error);
