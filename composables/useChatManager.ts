@@ -1,6 +1,8 @@
-import { ref, computed, readonly } from 'vue';
+import { ref, computed, readonly, onMounted, onUnmounted } from 'vue';
 import { ChatService } from '~/services/ChatService';
 import type { ChatMessage, Chat, ChatsResponse } from '~/types/chat';
+import type { PusherMessageSentEvent, PusherMessageReadEvent } from '~/types/pusher';
+import { PUSHER_EVENTS, PUSHER_CHANNELS } from '~/config/pusher-events';
 
 export const useChatManager = () => {
   // Estados reativos
@@ -227,6 +229,159 @@ export const useChatManager = () => {
     return formatted;
   });
 
+  /**
+   * Configurar listener do Pusher para novas mensagens
+   */
+  const setupPusherListener = () => {
+    try {
+      console.log('🔔 setupPusherListener iniciado');
+      
+      // Obter instância do Echo do plugin
+      const { $echo } = useNuxtApp();
+      console.log('🔔 Echo obtido:', $echo);
+      
+      if (!$echo) {
+        console.warn('⚠️ Echo não disponível para Pusher listener');
+        return;
+      }
+
+      console.log('🔔 Configurando listener do Pusher para novas mensagens...');
+
+      // Escutar canais de chat para mensagens
+      const currentUser = useAuth().user.value;
+      console.log('🔔 Usuário atual:', currentUser);
+      
+      if (currentUser?.id) {
+        console.log('🔔 Chats disponíveis para configurar listener:', chats.value);
+        
+        // Escutar todos os chats do usuário
+        chats.value.forEach(chat => {
+          const channelName = PUSHER_CHANNELS.CHAT(chat.id);
+          console.log('🔔 Configurando listener para canal:', channelName);
+
+          try {
+            const channel = $echo.channel(channelName);
+            console.log('🔔 Canal criado:', channel);
+            
+            channel.listen(PUSHER_EVENTS.MESSAGE_SENT, (event: PusherMessageSentEvent) => {
+              console.log('🔔 Nova mensagem recebida via Pusher:', event);
+              
+              const newMessage: ChatMessage = {
+                id: event.id,
+                chat_id: event.chat_id,
+                content: event.content,
+                sender_id: event.sender_id,
+                sender_type: event.sender_type,
+                message_type: 'text', // Padrão para mensagens de texto
+                metadata: null,
+                is_read: event.is_read,
+                read_at: null,
+                created_at: event.created_at,
+                updated_at: event.created_at
+              };
+
+              // Adicionar mensagem ao estado
+              messages.value.push(newMessage);
+              console.log('🔔 Mensagem adicionada ao estado:', newMessage);
+
+              // Atualizar último mensagem no chat correspondente
+              const chatIndex = chats.value.findIndex(c => c.id === event.chat_id);
+              if (chatIndex !== -1) {
+                chats.value[chatIndex].last_message = newMessage;
+                chats.value[chatIndex].unread_count = (chats.value[chatIndex].unread_count || 0) + 1;
+                console.log('🔔 Chat atualizado com nova mensagem');
+              }
+
+              // Se a mensagem é para o chat atual, fazer scroll para baixo
+              if (currentChat.value?.id === event.chat_id) {
+                // Emitir evento para fazer scroll (será capturado pelo ChatInterface)
+                window.dispatchEvent(new CustomEvent('scroll-to-bottom'));
+              }
+            });
+
+            console.log(`✅ Listener configurado para chat ${chat.id} no canal ${channelName}`);
+          } catch (channelError) {
+            console.error(`❌ Erro ao configurar listener para chat ${chat.id}:`, channelError);
+          }
+        });
+      } else {
+        console.warn('⚠️ Usuário não autenticado, não é possível configurar listener');
+      }
+
+      // TODO: Implementar listener para mensagens lidas quando necessário
+      // .listen(PUSHER_EVENTS.MESSAGE_READ, (event: PusherMessageReadEvent) => { ... });
+
+      console.log('✅ Listener do Pusher configurado com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao configurar listener do Pusher:', error);
+    }
+  };
+
+  /**
+   * Testar conexão do Pusher
+   */
+  const testPusherConnection = () => {
+    try {
+      console.log('🧪 Testando conexão do Pusher...');
+      
+      const { $echo } = useNuxtApp();
+      if (!$echo) {
+        console.error('❌ Echo não disponível para teste');
+        return;
+      }
+
+      // Testar conexão com um canal público
+      const testChannel = $echo.channel('test-channel');
+      
+      testChannel.subscribed(() => {
+        console.log('✅ Conectado ao canal de teste');
+        
+        // Testar envio de evento
+        testChannel.whisper('test-event', { message: 'Teste de conexão' });
+        console.log('✅ Evento de teste enviado');
+      });
+
+      console.log('🧪 Teste de conexão iniciado');
+    } catch (error) {
+      console.error('❌ Erro no teste de conexão:', error);
+    }
+  };
+
+  /**
+   * Limpar listener do Pusher
+   */
+  const cleanupPusherListener = () => {
+    try {
+      const { $echo } = useNuxtApp();
+      
+      if ($echo) {
+        console.log('🔔 Limpando listener do Pusher...');
+        // O Echo automaticamente limpa os listeners quando desconecta
+        $echo.disconnect();
+      }
+    } catch (error) {
+      console.error('❌ Erro ao limpar listener do Pusher:', error);
+    }
+  };
+
+  // Configurar listener do Pusher quando o composable é montado
+  onMounted(() => {
+    console.log('🚀 useChatManager - onMounted chamado');
+    console.log('🚀 Chats disponíveis:', chats.value);
+    console.log('🚀 Usuário atual:', currentUser.value);
+    
+    // Aguardar um pouco para garantir que os chats foram carregados
+    setTimeout(() => {
+      console.log('🚀 Executando setupPusherListener após delay');
+      setupPusherListener();
+    }, 1000);
+  });
+
+  // Limpar listener quando o composable é desmontado
+  onUnmounted(() => {
+    cleanupPusherListener();
+  });
+
   return {
     // Estados
     chats: readonly(chats) as ComputedRef<Chat[]>,
@@ -251,6 +406,7 @@ export const useChatManager = () => {
     selectChat,
     getChatDisplayName,
     formatMessage,
-    isOwnMessage
+    isOwnMessage,
+    testPusherConnection
   };
 }; 

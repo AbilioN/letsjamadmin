@@ -25,14 +25,26 @@
             </p>
           </div>
         </div>
-        <v-btn
-          @click="$emit('close')"
-          icon
-          size="small"
-          variant="text"
-        >
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        <div class="d-flex align-center">
+          <v-btn
+            @click="testPusherConnection"
+            icon
+            size="small"
+            variant="text"
+            class="mr-2"
+            title="Testar conexão Pusher"
+          >
+            <v-icon>mdi-wifi</v-icon>
+          </v-btn>
+          <v-btn
+            @click="$emit('close')"
+            icon
+            size="small"
+            variant="text"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
       </div>
     </div>
 
@@ -204,7 +216,8 @@ const {
   sendMessage,
   startChatWithUser,
   getChatDisplayName,
-  formatMessage
+  formatMessage,
+  testPusherConnection
 } = useChatManager();
 
 
@@ -318,6 +331,14 @@ onMounted(async () => {
     await loadChats();
   }
   await initializeChat();
+
+  // Listener para scroll automático quando nova mensagem chegar via Pusher
+  window.addEventListener('scroll-to-bottom', scrollToBottom);
+});
+
+onUnmounted(() => {
+  // Limpar listener
+  window.removeEventListener('scroll-to-bottom', scrollToBottom);
 });
 
 // Watchers
