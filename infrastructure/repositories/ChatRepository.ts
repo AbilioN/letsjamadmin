@@ -5,8 +5,11 @@ import type {
   ChatChannel,
   ApiResponse, 
   ChatResponse, 
+  ChatCreateResponse,
   MessageResponse, 
+  MessageSendResponse,
   ChatMessageResponse,
+  ChatMessageSendResponse,
   ChatsResponse,
   MessagesResponse
 } from '~/types/chat';
@@ -24,12 +27,13 @@ export class ChatRepository {
   /**
    * Enviar mensagem para outro usuário (cria/usa chat privado)
    */
-  async sendMessageToUser(content: string, receiverId: number, receiverType: 'user' | 'admin'): Promise<ChatMessageResponse> {
+  async sendMessageToUser(content: string, receiverId: number, receiverType: 'user' | 'admin'): Promise<ChatMessageSendResponse> {
     try {
-      const response = await this.chatApiClient.post<ChatMessageResponse>('/chat/send', {
+      const response = await this.chatApiClient.post<ChatMessageSendResponse>('/chat/send', {
         content,
         receiver_type: receiverType,
-        receiver_id: receiverId
+        receiver_id: receiverId,
+        message_type: 'text'
       });
       return response;
     } catch (error) {
@@ -80,10 +84,11 @@ export class ChatRepository {
   /**
    * Enviar mensagem para um chat específico
    */
-  async sendMessageToChat(chatId: number, content: string): Promise<MessageResponse> {
+  async sendMessageToChat(chatId: number, content: string): Promise<MessageSendResponse> {
     try {
-      const response = await this.chatApiClient.post<MessageResponse>(`/chat/${chatId}/send`, {
-        content
+      const response = await this.chatApiClient.post<MessageSendResponse>(`/chat/${chatId}/send`, {
+        content,
+        message_type: 'text'
       });
       return response;
     } catch (error) {
@@ -95,9 +100,9 @@ export class ChatRepository {
   /**
    * Criar chat privado
    */
-  async createPrivateChat(otherUserId: number, otherUserType: 'user' | 'admin'): Promise<ChatResponse> {
+  async createPrivateChat(otherUserId: number, otherUserType: 'user' | 'admin'): Promise<ChatCreateResponse> {
     try {
-      const response = await this.chatApiClient.post<ChatResponse>('/chat/create-private', {
+      const response = await this.chatApiClient.post<ChatCreateResponse>('/chat/create-private', {
         other_user_id: otherUserId,
         other_user_type: otherUserType
       });
@@ -111,9 +116,9 @@ export class ChatRepository {
   /**
    * Criar chat em grupo
    */
-  async createGroupChat(name: string, description: string, participants: Array<{ user_id: number; user_type: 'user' | 'admin' }>): Promise<ChatResponse> {
+  async createGroupChat(name: string, description: string, participants: Array<{ user_id: number; user_type: 'user' | 'admin' }>): Promise<ChatCreateResponse> {
     try {
-      const response = await this.chatApiClient.post<ChatResponse>('/chat/create-group', {
+      const response = await this.chatApiClient.post<ChatCreateResponse>('/chat/create-group', {
         name,
         description,
         participants

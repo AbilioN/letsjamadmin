@@ -227,12 +227,20 @@ const closeChat = () => {
 const handleSendMessage = async () => {
   if (!newMessage.value.trim()) return;
   
+  console.log('💬 handleSendMessage chamado:', { 
+    currentChat: currentChat.value, 
+    initialUser: props.initialUser,
+    message: newMessage.value 
+  });
+  
   try {
     if (currentChat.value) {
       // Se já tem um chat, enviar mensagem para ele
+      console.log('💬 Enviando mensagem para chat existente:', currentChat.value.id);
       await sendMessage(newMessage.value);
     } else if (props.initialUser) {
       // Se não tem chat mas tem usuário inicial, enviar mensagem para o usuário
+      console.log('💬 Criando novo chat com usuário:', props.initialUser.id);
       await sendMessageToUser(newMessage.value, props.initialUser.id, 'user');
     }
     newMessage.value = '';

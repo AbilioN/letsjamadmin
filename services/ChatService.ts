@@ -3,8 +3,11 @@ import type {
   ChatMessage, 
   Chat, 
   ChatResponse, 
+  ChatCreateResponse,
   MessageResponse, 
+  MessageSendResponse,
   ChatMessageResponse,
+  ChatMessageSendResponse,
   ChatsResponse,
   MessagesResponse
 } from '~/types/chat';
@@ -21,8 +24,15 @@ export class ChatService {
    */
   async createPrivateChat(otherUserId: number, otherUserType: 'user' | 'admin'): Promise<Chat> {
     try {
-      const response = await this.chatRepository.createPrivateChat(otherUserId, otherUserType);
-      return response;
+      const response: ChatCreateResponse = await this.chatRepository.createPrivateChat(otherUserId, otherUserType);
+      console.log('🔍 ChatService - createPrivateChat response:', response);
+      
+      // A API retorna { success: true, data: { ... } }
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      throw new Error('Resposta inválida da API ao criar chat');
     } catch (error) {
       console.error('ChatService - createPrivateChat error:', error);
       throw error;
@@ -34,8 +44,14 @@ export class ChatService {
    */
   async createGroupChat(name: string, description: string, participants: Array<{ user_id: number; user_type: 'user' | 'admin' }>): Promise<Chat> {
     try {
-      const response = await this.chatRepository.createGroupChat(name, description, participants);
-      return response;
+      const response: ChatCreateResponse = await this.chatRepository.createGroupChat(name, description, participants);
+      
+      // A API retorna { success: true, data: { ... } }
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      throw new Error('Resposta inválida da API ao criar chat em grupo');
     } catch (error) {
       console.error('ChatService - createGroupChat error:', error);
       throw error;
@@ -56,7 +72,14 @@ export class ChatService {
         throw new Error('Mensagem muito longa (máximo 1000 caracteres)');
       }
 
-      return await this.chatRepository.sendMessageToUser(content.trim(), otherUserId, otherUserType);
+      const response: ChatMessageSendResponse = await this.chatRepository.sendMessageToUser(content.trim(), otherUserId, otherUserType);
+      
+      // A API retorna { success: true, data: { ... } }
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      throw new Error('Resposta inválida da API ao enviar mensagem para usuário');
     } catch (error) {
       console.error('ChatService - sendMessageToUser error:', error);
       throw error;
@@ -73,16 +96,18 @@ export class ChatService {
         throw new Error('Mensagem não pode estar vazia');
       }
 
-      if (!content.trim()) {
-        throw new Error('Mensagem não pode estar vazia');
-      }
-
       if (content.length > 1000) {
         throw new Error('Mensagem muito longa (máximo 1000 caracteres)');
       }
 
-      const response = await this.chatRepository.sendMessageToChat(chatId, content.trim());
-      return response;
+      const response: MessageSendResponse = await this.chatRepository.sendMessageToChat(chatId, content.trim());
+      
+      // A API retorna { success: true, data: { ... } }
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      throw new Error('Resposta inválida da API ao enviar mensagem para chat');
     } catch (error) {
       console.error('ChatService - sendMessageToChat error:', error);
       throw error;

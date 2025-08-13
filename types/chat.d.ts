@@ -67,6 +67,26 @@ export interface ChatResponse extends Chat {
   participants_count: number;
   created_at: string;
   updated_at: string;
+  created_by: number;
+  created_by_type: 'user' | 'admin';
+}
+
+// Wrapper da API para criação de chat
+export interface ChatCreateResponse {
+  success: boolean;
+  data: ChatResponse;
+}
+
+// Wrapper da API para envio de mensagem
+export interface MessageSendResponse {
+  success: boolean;
+  data: MessageResponse;
+}
+
+// Wrapper da API para envio de mensagem para usuário
+export interface ChatMessageSendResponse {
+  success: boolean;
+  data: ChatMessageResponse;
 }
 
 export interface MessageResponse extends ChatMessage {}

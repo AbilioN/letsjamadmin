@@ -46,6 +46,12 @@ export const useChatManager = () => {
 
     try {
       const chat = await chatService.createPrivateChat(userId, userType);
+      console.log('🚀 Chat criado:', chat);
+      
+      // Verificar se o chat tem ID
+      if (!chat || !chat.id) {
+        throw new Error('Chat criado sem ID válido');
+      }
       
       // Adicionar à lista de chats se não existir
       const existingChat = chats.value.find(c => c.id === chat.id);
@@ -55,6 +61,7 @@ export const useChatManager = () => {
 
       // Definir como chat atual
       currentChat.value = chat;
+      console.log('🎯 CurrentChat definido:', currentChat.value);
 
       // Retornar o chat criado
       return chat;
@@ -95,9 +102,15 @@ export const useChatManager = () => {
    * Enviar mensagem para chat atual
    */
   const sendMessage = async (content: string) => {
-    if (!currentChat.value || !content.trim()) return;
+    console.log('📤 Tentando enviar mensagem:', { currentChat: currentChat.value, content });
+    
+    if (!currentChat.value || !currentChat.value.id || !content.trim()) {
+      console.error('Send message error: currentChat or chat ID is undefined', currentChat.value);
+      return;
+    }
 
     try {
+      console.log('📤 Enviando mensagem para chat ID:', currentChat.value.id);
       const message = await chatService.sendMessageToChat(currentChat.value.id, content);
       
       // Adicionar mensagem à lista
