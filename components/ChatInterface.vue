@@ -151,6 +151,13 @@
 
       <!-- Input de Mensagem -->
       <div class="chat-input">
+        <!-- Exibir erro de envio se houver -->
+        <div v-if="sendError" class="send-error mb-2">
+          <v-alert type="error" variant="tonal" density="compact">
+            {{ sendError }}
+          </v-alert>
+        </div>
+        
         <v-form @submit.prevent="handleSendMessage">
           <div class="d-flex align-end">
             <v-text-field
@@ -179,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, watch } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue';
 import type { ChatMessage, Chat } from '~/types/chat';
 
 // Props
@@ -201,6 +208,7 @@ const emit = defineEmits<{
 // Estados locais
 const newMessage = ref('');
 const messagesContainer = ref<HTMLElement>();
+const sendError = ref('');
 
 // Composable de chat
 const {
@@ -216,7 +224,6 @@ const {
   sendMessage,
   startChatWithUser,
   getChatDisplayName,
-  formatMessage,
   testPusherConnection
 } = useChatManager();
 
@@ -250,32 +257,35 @@ const handleSendMessage = async () => {
   });
   
   try {
+    sendError.value = ''; // Limpar erro anterior
+    
     if (currentChat.value) {
       // Se já tem um chat, enviar mensagem para ele
       console.log('💬 Enviando mensagem para chat existente:', currentChat.value.id);
       await sendMessage(newMessage.value);
+      newMessage.value = ''; // Limpar apenas o campo de input
+      // Não fazer scroll aqui, deixar o Pusher fazer
     } else if (props.initialUser) {
-      // Se não tem chat mas tem usuário inicial, enviar mensagem para o usuário
+      // Se não tem chat mas tem usuário inicial, criar chat e enviar mensagem
       console.log('💬 Criando novo chat com usuário:', props.initialUser.id);
-      await sendMessageToUser(newMessage.value, props.initialUser.id, 'user');
+      const chat = await startChatWithUser(props.initialUser.id, 'user');
+      if (chat && chat.id) {
+        // Aguardar um pouco para o chat ser criado
+        await nextTick();
+        // Enviar a mensagem para o chat recém-criado
+        await sendMessage(newMessage.value);
+        newMessage.value = ''; // Limpar apenas o campo de input
+        // Não fazer scroll aqui, deixar o Pusher fazer
+      }
     }
-    newMessage.value = '';
-    scrollToBottom();
   } catch (err) {
     console.error('Erro ao enviar mensagem:', err);
-  }
-};
-
-const sendMessageToUser = async (content: string, userId: number, userType: 'user' | 'admin') => {
-  try {
-    const response = await startChatWithUser(userId, userType);
-    // Após criar o chat, enviar a mensagem
-    if (response) {
-      await sendMessage(content);
-    }
-  } catch (err) {
-    console.error('Erro ao enviar mensagem para usuário:', err);
-    throw err;
+    // Mostrar erro para o usuário
+    sendError.value = 'Erro ao enviar mensagem. Tente novamente.';
+    // Limpar erro após 3 segundos
+    setTimeout(() => {
+      sendError.value = '';
+    }, 3000);
   }
 };
 
@@ -288,11 +298,18 @@ const initializeChat = async () => {
       // Após criar o chat, carregar as mensagens diretamente
       if (chat && chat.id) {
         console.log('📥 Carregando mensagens do chat criado:', chat.id);
+        // Aguardar um pouco para o chat ser criado
+        await nextTick();
         // Usar o loadChatMessages do useChatManager
         await loadChatMessages(chat.id);
       }
     } catch (err) {
       console.error('Erro ao inicializar chat:', err);
+      sendError.value = 'Erro ao inicializar chat. Tente novamente.';
+      // Limpar erro após 5 segundos
+      setTimeout(() => {
+        sendError.value = '';
+      }, 5000);
     }
   }
 };
@@ -310,11 +327,21 @@ const scrollToBottom = () => {
 };
 
 const formatTime = (dateString?: string) => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  if (!dateString) return '--:--';
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return '--:--';
+    }
+    return date.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (err) {
+    console.warn('Erro ao formatar data:', err, dateString);
+    return '--:--';
+  }
 };
 
 const getMessageAuthor = (message: ChatMessage & { isOwn: boolean; time: string; user_name: string }) => {
@@ -351,7 +378,15 @@ watch(() => props.initialChat, (newChat) => {
 
 watch(() => props.initialUser, async (newUser) => {
   if (newUser && !currentChat.value) {
-    await initializeChat();
+    try {
+      await initializeChat();
+    } catch (err) {
+      console.error('Erro ao inicializar chat com usuário:', err);
+      sendError.value = 'Erro ao inicializar chat. Tente novamente.';
+      setTimeout(() => {
+        sendError.value = '';
+      }, 5000);
+    }
   }
 }, { immediate: true });
 
@@ -540,5 +575,14 @@ console.log('🎯 ChatInterface carregado com initialChat:', props.initialChat, 
 .conversations-list::-webkit-scrollbar-thumb:hover,
 .chat-messages::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* Estilos para erro de envio */
+.send-error {
+  margin-bottom: 8px;
+}
+
+.send-error .v-alert {
+  margin: 0;
 }
 </style> 

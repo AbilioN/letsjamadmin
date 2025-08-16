@@ -65,6 +65,9 @@ export const useChatManager = () => {
       currentChat.value = chat;
       console.log('🎯 CurrentChat definido:', currentChat.value);
 
+      // Configurar listener do Pusher para o novo chat
+      await setupPusherListenerForChat(chat.id);
+
       // Retornar o chat criado
       return chat;
     } catch (err) {
@@ -120,8 +123,9 @@ export const useChatManager = () => {
       console.log('📤 Enviando mensagem para chat ID:', currentChat.value.id);
       const message = await chatService.sendMessageToChat(currentChat.value.id, content);
       
-      // Adicionar mensagem à lista
-      messages.value.push(message);
+      // NÃO adicionar mensagem à lista localmente
+      // Deixar o Pusher fazer a inserção para evitar problemas de formatação
+      // messages.value.push(message);
       
       // Atualizar última mensagem na conversa
       if (currentChat.value) {
@@ -153,8 +157,9 @@ export const useChatManager = () => {
       // Definir como chat atual
       currentChat.value = response.chat;
 
-      // Adicionar mensagem à lista
-      messages.value.push(response.message);
+      // NÃO adicionar mensagem à lista localmente
+      // Deixar o Pusher fazer a inserção para evitar problemas de formatação
+      // messages.value.push(response.message);
 
       return response;
     } catch (err) {
@@ -177,7 +182,11 @@ export const useChatManager = () => {
     
     console.log('🎯 CurrentChat definido:', currentChat.value);
     
+    // Carregar mensagens do chat
     await loadChatMessages(chat.id);
+    
+    // Configurar listener do Pusher para o chat selecionado se ainda não estiver configurado
+    await setupPusherListenerForChat(chat.id);
   };
 
   /**
@@ -256,15 +265,37 @@ export const useChatManager = () => {
         
         // Escutar todos os chats do usuário
         chats.value.forEach(chat => {
+          // Verificar se já existe um listener para este chat
           const channelName = PUSHER_CHANNELS.CHAT(chat.id);
           console.log('🔔 Configurando listener para canal:', channelName);
 
           try {
+            // Verificar se já está inscrito no canal
+            if ($pusher.channel(channelName)) {
+              console.log(`🔔 Já inscrito no canal ${channelName}, pulando...`);
+              return;
+            }
+
             const channel = $pusher.subscribe(channelName);
             console.log('🔔 Canal inscrito:', channel);
             
             channel.bind(PUSHER_EVENTS.MESSAGE_SENT, (event: PusherMessageSentEvent) => {
               console.log('🔔 Nova mensagem recebida via Pusher:', event);
+              
+              // Tratar data de forma mais robusta
+              let createdAt = event.created_at;
+              try {
+                if (createdAt) {
+                  const date = new Date(createdAt);
+                  if (isNaN(date.getTime())) {
+                    console.warn('⚠️ Data inválida recebida do Pusher:', createdAt);
+                    createdAt = new Date().toISOString(); // Usar data atual como fallback
+                  }
+                }
+              } catch (err) {
+                console.warn('⚠️ Erro ao processar data do Pusher:', err);
+                createdAt = new Date().toISOString(); // Usar data atual como fallback
+              }
               
               const newMessage: ChatMessage = {
                 id: event.id,
@@ -276,8 +307,8 @@ export const useChatManager = () => {
                 metadata: null,
                 is_read: event.is_read,
                 read_at: null,
-                created_at: event.created_at,
-                updated_at: event.created_at
+                created_at: createdAt,
+                updated_at: createdAt
               };
 
               // Adicionar mensagem ao estado
@@ -314,6 +345,82 @@ export const useChatManager = () => {
       console.log('✅ Listener do Pusher configurado com sucesso');
     } catch (error) {
       console.error('❌ Erro ao configurar listener do Pusher:', error);
+    }
+  };
+
+  /**
+   * Configurar listener do Pusher para um chat específico
+   */
+  const setupPusherListenerForChat = async (chatId: number) => {
+    try {
+      console.log(`🔔 setupPusherListenerForChat iniciado para chat ID: ${chatId}`);
+      const { $pusher } = useNuxtApp();
+
+      if (!$pusher) {
+        console.warn('⚠️ Pusher não disponível para listener de chat específico');
+        return;
+      }
+
+      const channelName = PUSHER_CHANNELS.CHAT(chatId);
+      console.log('🔔 Configurando listener para canal:', channelName);
+
+      const channel = $pusher.subscribe(channelName);
+      console.log('🔔 Canal inscrito:', channel);
+
+      channel.bind(PUSHER_EVENTS.MESSAGE_SENT, (event: PusherMessageSentEvent) => {
+        console.log('🔔 Nova mensagem recebida via Pusher para chat:', chatId, event);
+        
+        // Tratar data de forma mais robusta
+        let createdAt = event.created_at;
+        try {
+          if (createdAt) {
+            const date = new Date(createdAt);
+            if (isNaN(date.getTime())) {
+              console.warn('⚠️ Data inválida recebida do Pusher para chat:', chatId, createdAt);
+              createdAt = new Date().toISOString(); // Usar data atual como fallback
+            }
+          }
+        } catch (err) {
+          console.warn('⚠️ Erro ao processar data do Pusher para chat:', chatId, err);
+          createdAt = new Date().toISOString(); // Usar data atual como fallback
+        }
+        
+        const newMessage: ChatMessage = {
+          id: event.id,
+          chat_id: event.chat_id,
+          content: event.content,
+          sender_id: event.sender_id,
+          sender_type: event.sender_type,
+          message_type: 'text', // Padrão para mensagens de texto
+          metadata: null,
+          is_read: event.is_read,
+          read_at: null,
+          created_at: createdAt,
+          updated_at: createdAt
+        };
+
+        // Adicionar mensagem ao estado
+        messages.value.push(newMessage);
+        console.log('🔔 Mensagem adicionada ao estado para chat:', chatId, newMessage);
+
+        // Atualizar última mensagem no chat correspondente
+        const chatIndex = chats.value.findIndex(c => c.id === event.chat_id);
+        if (chatIndex !== -1) {
+          chats.value[chatIndex].last_message = newMessage;
+          chats.value[chatIndex].unread_count = (chats.value[chatIndex].unread_count || 0) + 1;
+          console.log('🔔 Chat atualizado com nova mensagem para chat:', chatId);
+        }
+
+        // Se a mensagem é para o chat atual, fazer scroll para baixo
+        if (currentChat.value?.id === event.chat_id) {
+          // Emitir evento para fazer scroll (será capturado pelo ChatInterface)
+          window.dispatchEvent(new CustomEvent('scroll-to-bottom'));
+        }
+      });
+
+      console.log(`✅ Listener do Pusher configurado com sucesso para chat ${chatId}`);
+    } catch (error) {
+      console.error(`❌ Erro ao configurar listener do Pusher para chat ${chatId}:`, error);
     }
   };
 
@@ -408,6 +515,7 @@ export const useChatManager = () => {
     getChatDisplayName,
     formatMessage,
     isOwnMessage,
-    testPusherConnection
+    testPusherConnection,
+    setupPusherListenerForChat
   };
 }; 

@@ -222,12 +222,25 @@ export class ChatService {
   } {
     const currentUser = useAuth().user.value;
     
+    // Tratar data de forma mais robusta
+    let time = '--:--';
+    try {
+      if (message.created_at) {
+        const date = new Date(message.created_at);
+        if (!isNaN(date.getTime())) {
+          time = date.toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Erro ao formatar data da mensagem:', err, message);
+    }
+    
     return {
       ...message,
-      time: new Date(message.created_at).toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
+      time,
       isOwn: message.sender_id === currentUser?.id,
       user_name: message.sender_type === 'admin' ? 'Admin' : 'Usuário'
     };
